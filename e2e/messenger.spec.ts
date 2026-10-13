@@ -652,7 +652,7 @@ test('sign out revokes another open tab and accepted work survives browser closu
 });
 
 test(restartTitle, async ({ page }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(360_000);
   const project = process.env.ACCEPTANCE_PROJECT;
   test.skip(
     !project,
@@ -718,6 +718,26 @@ test(restartTitle, async ({ page }) => {
     ],
     { stdio: 'pipe', timeout: 60_000 },
   );
+  // Regression: CI 38353472251 timed recovery while the Gateway was still starting.
+  // Compose restart waits for the process, not health. Allow the pinned bootstrap's
+  // 180-second window separately, then retain the 90-second authenticated recovery
+  // gate and all canonical/queue/no-replay checks below.
+  await expect
+    .poll(
+      () =>
+        execFileSync(
+          'docker',
+          [
+            'inspect',
+            '--format',
+            '{{.State.Health.Status}}',
+            `${project}-openclaw-1`,
+          ],
+          { encoding: 'utf8', timeout: 10_000 },
+        ).trim(),
+      { timeout: 180_000 },
+    )
+    .toBe('healthy');
   await expect
     .poll(async () => (await page.request.get('/ready')).status(), {
       timeout: 90_000,
@@ -770,14 +790,22 @@ test(restartTitle, async ({ page }) => {
   await unconfirmed
     .getByRole('button', { name: 'Discard', exact: true })
     .click();
-  const queuedCanonical = transcript(page).filter({
-    hasText: 'Accepted queue while Gateway restarts',
-  });
+  // A submitted queue card can briefly have a timestamp alongside its canonical
+  // user turn. Match committed history, not both copies during reconciliation.
+  const queuedCanonical = transcript(page)
+    .and(
+      page.locator(
+        '[data-message-role="user"][data-message-state="canonical"]',
+      ),
+    )
+    .filter({ hasText: 'Accepted queue while Gateway restarts' });
   // Idle can briefly appear between recovery resolution and asynchronous
   // dispatch. Wait for this item's canonical turn, not that intermediate state.
   await expect(queuedCanonical).toHaveCount(1, { timeout: 60_000 });
   await expect(
-    queuedCanonical.locator('xpath=following-sibling::article[1]'),
+    queuedCanonical.locator(
+      'xpath=following-sibling::article[1][@data-message-role="assistant" and @data-message-state="canonical"]',
+    ),
   ).toContainText('Real Gateway integration response.', { timeout: 60_000 });
   await idle(page);
   await expect(unconfirmed).not.toBeVisible();
