@@ -1,0 +1,24 @@
+.positioner {
+  z-index: 120;
+  width: min(380px, calc(100vw - 24px));
+  margin: 0;
+  inset: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+.surface {
+  max-height: inherit;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  box-shadow: 0 8px 28px #1025441a;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  transition-timing-function: var(--ease-out);
+}

@@ -1,0 +1,15 @@
+"$schema" = "https://conductor.build/schemas/settings.repo.schema.json"
+
+[scripts]
+setup = "pnpm install --frozen-lockfile"
+run_mode = "nonconcurrent"
+
+[scripts.run.app]
+available_in = ["local"]
+command = "docker compose up --build"
+default = true
+icon = "play"
+
+[scripts.run.check]
+command = "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm build"
+icon = "test-tube"

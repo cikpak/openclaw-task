@@ -1,0 +1,31 @@
+{
+  "name": "@messenger/backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc",
+    "start": "node dist/apps/backend/src/main.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fastify/multipart": "^9.3.0",
+    "@fastify/rate-limit": "^10.3.0",
+    "@fastify/secure-session": "^8.3.0",
+    "@fastify/websocket": "^11.2.0",
+    "@messenger/contracts": "workspace:*",
+    "@openclaw/gateway-client": "2026.10.1",
+    "@openclaw/gateway-protocol": "2026.10.1",
+    "better-sqlite3": "^12.4.1",
+    "fastify": "^5.6.2",
+    "fastify-type-provider-zod": "^6.1.0",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.20.6",
+    "ws": "8.21.3"
+  }
+}

@@ -1,0 +1,12 @@
+.git
+.agents
+.claude
+.context
+.gstack
+node_modules
+**/node_modules
+**/dist
+coverage
+.env
+test-results
+playwright-report

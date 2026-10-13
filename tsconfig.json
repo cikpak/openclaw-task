@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "noEmit": true,
+    "paths": {
+      "@messenger/contracts": ["./packages/contracts/src/index.ts"]
+    }
+  },
+  "include": ["playwright.config.ts", "e2e/**/*.ts"]
+}

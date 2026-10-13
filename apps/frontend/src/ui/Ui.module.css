@@ -1,0 +1,220 @@
+.dialogMotion {
+  animation: dialog-enter var(--motion-dialog) var(--ease-out);
+}
+.modal {
+  color: var(--ink);
+  background: var(--paper);
+  width: min(480px, calc(100vw - 32px));
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 24px;
+  box-shadow: 0 16px 48px #00000026;
+  max-height: 86dvh;
+  overflow: auto;
+}
+.dialogMotion::backdrop {
+  background: #00000066;
+  animation: backdrop-enter var(--motion-dialog) var(--ease-out);
+}
+.dialogMotion[data-closing] {
+  animation: dialog-exit var(--motion-dialog) var(--ease-out) forwards;
+}
+.dialogMotion[data-closing]::backdrop {
+  animation: backdrop-exit var(--motion-dialog) var(--ease-out) forwards;
+}
+.dialogContent {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes dialog-exit {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+}
+@keyframes backdrop-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes backdrop-exit {
+  to {
+    opacity: 0;
+  }
+}
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-block: 10px;
+}
+.iconSlot {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  flex: 0 0 16px;
+  align-items: center;
+  justify-content: center;
+}
+.spinner {
+  display: inline-flex;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.select {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+  min-height: 40px;
+  font-size: 14px;
+  font-weight: 400;
+}
+.select > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.select > svg {
+  flex: 0 0 16px;
+}
+.selectMenu {
+  inset: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  z-index: 20;
+  overflow: visible;
+  border-radius: 8px;
+}
+.selectOptions {
+  max-height: inherit;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px #0000001f;
+}
+.selectOption {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  min-height: 40px;
+  font-weight: 400;
+}
+.selectOption[aria-selected='true'] {
+  background: var(--wash);
+  font-weight: 500;
+}
+.selectOption:focus {
+  outline: none;
+  background: #ededed;
+}
+@media (max-width: 700px) {
+  .select,
+  .selectOption {
+    min-height: 44px;
+    font-size: 16px;
+  }
+}
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+.modalHeader h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.modalHeader button {
+  font-size: 22px;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  padding: 4px 8px;
+}
+.error {
+  background: #fff5f5;
+  color: var(--danger);
+  border: 1px solid #efcccc;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 16px;
+  line-height: 1.55;
+}
+.chatStatusDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: #999999;
+  transition:
+    background-color var(--motion-control) var(--ease-out),
+    box-shadow var(--motion-control) var(--ease-out);
+}
+.chatStatusDot[data-chat-state='working'] {
+  background: linear-gradient(110deg, #2563eb 25%, #bfdbfe 50%, #2563eb 75%);
+  background-size: 250% 100%;
+  box-shadow: 0 0 0 3px #2563eb1a;
+  animation: chat-status-shimmer 1.6s ease-in-out infinite;
+}
+.chatStatusDot[data-chat-state='answered'] {
+  background: #15803d;
+  box-shadow: 0 0 0 2px #15803d12;
+}
+.chatStatusDot[data-chat-state='attention'] {
+  background: #ca8a04;
+}
+.chatStatusDot[data-chat-state='failed'] {
+  background: #dc2626;
+  box-shadow: 0 0 0 2px #dc262612;
+}
+@keyframes chat-status-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chatStatusDot[data-chat-state='working'] {
+    animation: none;
+    background: #2563eb;
+  }
+}

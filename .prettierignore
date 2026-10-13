@@ -1,0 +1,7 @@
+node_modules
+dist
+.context
+.agents
+.claude
+.gstack
+pnpm-lock.yaml

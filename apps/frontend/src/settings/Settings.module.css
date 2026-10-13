@@ -1,0 +1,205 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.modelControls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.modelControls > :first-child,
+.modelControls > p {
+  grid-column: 1 / -1;
+}
+.behaviorControls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+.instructions {
+  resize: vertical;
+  min-height: 120px;
+  max-height: 320px;
+  width: 100%;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.instructionsHelp {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.instructionsCount {
+  flex-shrink: 0;
+  min-width: 13ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.behaviorScope {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 16px 0 0;
+}
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.hint {
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--muted);
+  margin: 0;
+}
+.actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+}
+.actions:has(> .danger) {
+  align-items: center;
+}
+.actions > .danger {
+  margin-top: 0;
+}
+.optional {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: 4px;
+}
+.page {
+  max-width: 704px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 32px 32px 48px;
+  overflow: auto;
+}
+.page h1 {
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin: 12px 0 8px;
+}
+.subtitle {
+  color: var(--muted);
+  line-height: 1.7;
+  font-size: 16px;
+}
+.section {
+  margin-top: 32px;
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+.section h2 {
+  font-size: 16px;
+  margin: 0 0 20px;
+}
+.defaultsContent {
+  min-height: 570px;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  min-height: 34px;
+  padding: 8px 0;
+}
+.status {
+  border: 1px solid var(--line);
+  background: var(--wash);
+  padding: 12px 14px;
+  margin: 20px 0;
+  border-radius: 6px;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.policy {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+.policy button {
+  text-align: left;
+}
+.danger {
+  color: var(--danger);
+  margin-top: 16px;
+}
+.saveNote {
+  color: var(--ink);
+  font-size: 14px;
+}
+.fullScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: var(--paper);
+  overflow: auto;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  color: var(--ink);
+}
+.panel {
+  border: 0;
+  min-width: 0;
+  max-width: 650px;
+  margin: 0 auto;
+  padding: 24px 24px 40px;
+}
+.panel h2 {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: -0.025em;
+}
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.panelHeader h2 {
+  margin: 0;
+}
+.labelBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+@media (max-width: 700px) {
+  .page {
+    padding: 28px 22px 50px;
+  }
+  .defaultsContent {
+    min-height: 640px;
+  }
+  .panel {
+    padding: 24px 20px;
+  }
+  .row {
+    gap: 12px;
+  }
+  .back {
+    min-height: 44px;
+  }
+}

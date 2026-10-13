@@ -1,0 +1,45 @@
+{
+  "name": "openclaw-messenger",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.29.3",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter './apps/*' dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck && tsc --noEmit",
+    "test": "pnpm -r test && pnpm test:bootstrap",
+    "test:bootstrap": "vitest run deploy/*.test.mjs",
+    "test:e2e": "playwright test",
+    "test:acceptance": "node scripts/acceptance.mjs",
+    "test:gateway": "node scripts/gateway-acceptance.mjs",
+    "test:media": "node scripts/media-acceptance.mjs",
+    "test:live-provider": "node scripts/live-provider-smoke.mjs",
+    "test:capacity": "node scripts/capacity-acceptance.mjs",
+    "setup:env": "node scripts/setup-env.mjs",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@eslint/js": "^9.39.2",
+    "@types/node": "^24.10.0",
+    "eslint": "^9.39.2",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "globals": "^16.5.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.0",
+    "vitest": "^4.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild"
+    ]
+  }
+}
