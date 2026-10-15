@@ -13,7 +13,9 @@ RUN pnpm --filter @messenger/backend... --filter @messenger/frontend... build
 
 FROM caddy:2.10.2-alpine AS caddy
 
-FROM ghcr.io/openclaw/openclaw:2026.10.1
+# Extended-stable avoids the October PID-namespace inode check, which rejects
+# App Platform's synthetic per-process namespace inodes.
+FROM ghcr.io/openclaw/openclaw:2026.9.33
 USER root
 COPY --from=caddy /usr/bin/caddy /usr/local/bin/caddy
 COPY --from=build /messenger /messenger

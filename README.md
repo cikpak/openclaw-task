@@ -39,8 +39,11 @@ check `http://localhost:8080/ready` before testing chat execution.
 
 ## DigitalOcean App Platform demo
 
-For a disposable demo, `.do/app.yaml` runs Caddy, the backend, and pinned OpenClaw
-together in one container. **All data is temporary:** a deployment or container
+For a disposable demo, `.do/app.yaml` runs Caddy, the backend, and OpenClaw
+`2026.9.33` (the official extended-stable release) together in one container.
+This deployment uses that release because `2026.10.1` rejects App Platform's
+synthetic PID-namespace inodes during Gateway startup.
+**All data is temporary:** a deployment or container
 replacement can reset chats, uploads, agent settings, and device identities.
 There are no backups or additional storage/database services.
 
