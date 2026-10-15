@@ -4,7 +4,6 @@
 }
 
 :8080 {
-	encode zstd gzip
 	header {
 		X-Content-Type-Options nosniff
 		Referrer-Policy same-origin
@@ -13,12 +12,15 @@
 	}
 	@backend path /api/* /ws/* /health /ready
 	handle @backend {
+		# API ETags are write preconditions; edge compression must not weaken them.
+		header Cache-Control "no-store, no-transform"
 		reverse_proxy 127.0.0.1:3000 {
 			# DigitalOcean terminates public TLS; the backend trusts this single proxy.
 			header_up X-Forwarded-Proto https
 		}
 	}
 	handle {
+		encode zstd gzip
 		root * /srv
 		try_files {path} /index.html
 		file_server
