@@ -37,6 +37,47 @@ The backend healthcheck uses `/health`, and the frontend has no container
 healthcheck. `--wait` therefore does not guarantee authenticated Gateway readiness;
 check `http://localhost:8080/ready` before testing chat execution.
 
+## DigitalOcean App Platform demo
+
+For a disposable demo, `.do/app.yaml` runs Caddy, the backend, and pinned OpenClaw
+together in one container. **All data is temporary:** a deployment or container
+replacement can reset chats, uploads, agent settings, and device identities.
+There are no backups or additional storage/database services.
+
+1. Push the deployment files to `cikpak/openclaw-task` on `master` and authorize
+   DigitalOcean to read that GitHub repository.
+2. Create one App Platform **Web Service** from the repository root using
+   `deploy/app-platform.Dockerfile`. Leave build/run command overrides empty.
+   Use public HTTP port `8080`, route `/`, one instance, and disable autodeploy.
+   The spec defaults to Frankfurt and `apps-s-2vcpu-4gb` (4 GiB RAM, 2 shared CPUs);
+   choose another region or size in DigitalOcean if needed.
+3. Add the following **Run Time** environment variables before deploying. Select
+   **Encrypt** for every secret; copy values directly from your private `.env`
+   without surrounding shell quotes. Never commit `.env` or plaintext secrets.
+
+   | Variable                                            | Value                                           |
+   | --------------------------------------------------- | ----------------------------------------------- |
+   | `APP_ORIGIN`                                        | `${APP_URL}` (DigitalOcean bindable variable)   |
+   | `APP_USERNAME`                                      | Your login username, default `admin`            |
+   | `DEFAULT_MODEL`                                     | A model available with your chosen provider key |
+   | `ALLOW_INSECURE_LOOPBACK`                           | `false`                                         |
+   | `APP_PASSWORD_HASH`, `SESSION_KEY`, `GATEWAY_TOKEN` | Current `.env` values; encrypted                |
+   | `ANTHROPIC_API_KEY` and/or `OPENAI_API_KEY`         | Your provider key; encrypted                    |
+
+4. Set the HTTP health check to `/ready` on `8080`, initial delay 60 seconds,
+   interval 10 seconds, timeout 5 seconds, success threshold 1, failure threshold 30.
+   DigitalOcean supplies public HTTPS; the startup script configures internal
+   ports, local Gateway TLS, automatic device pairing, and temporary paths.
+5. Deploy, then manually check `/ready`, login, a streamed reply, and file
+   upload/download through the generated HTTPS URL. Delete the app after the demo.
+
+For CLI creation, use `doctl apps create --spec .do/app.yaml` after authenticating
+with `doctl auth init`. The committed spec has **blank secret placeholders**:
+its first deployment cannot become ready until you set the encrypted runtime
+values in the control panel and redeploy. Repository pushes do not apply YAML
+settings automatically; edit the app settings or submit an updated app spec.
+Do not resubmit this blank-secret template over an already configured app.
+
 ## Development and checks
 
 ```sh

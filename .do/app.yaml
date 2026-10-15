@@ -1,0 +1,66 @@
+name: openclaw-demo
+region: fra
+ingress:
+  rules:
+    - component:
+        name: messenger
+      match:
+        path:
+          prefix: /
+services:
+  - name: messenger
+    github:
+      repo: cikpak/openclaw-task
+      branch: master
+      deploy_on_push: false
+    source_dir: /
+    dockerfile_path: deploy/app-platform.Dockerfile
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-2vcpu-4gb
+    health_check:
+      http_path: /ready
+      port: 8080
+      initial_delay_seconds: 60
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 30
+    termination:
+      drain_seconds: 0
+      grace_period_seconds: 30
+    envs:
+      - key: APP_ORIGIN
+        scope: RUN_TIME
+        value: ${APP_URL}
+      - key: APP_USERNAME
+        scope: RUN_TIME
+        value: admin
+      - key: DEFAULT_MODEL
+        scope: RUN_TIME
+        value: anthropic/claude-sonnet-4-5
+      - key: ALLOW_INSECURE_LOOPBACK
+        scope: RUN_TIME
+        value: 'false'
+      # Set these encrypted runtime values in DigitalOcean before using the demo.
+      # Blank credentials deliberately prevent startup; never commit real values.
+      - key: APP_PASSWORD_HASH
+        scope: RUN_TIME
+        type: SECRET
+        value: ''
+      - key: SESSION_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: ''
+      - key: GATEWAY_TOKEN
+        scope: RUN_TIME
+        type: SECRET
+        value: ''
+      - key: ANTHROPIC_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: ''
+      - key: OPENAI_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: ''
