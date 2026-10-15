@@ -29,38 +29,12 @@ services:
     termination:
       drain_seconds: 0
       grace_period_seconds: 30
+    # Add APP_USERNAME, DEFAULT_MODEL and encrypted credentials to messenger
+    # in DigitalOcean. Omit placeholders: component values override app values.
     envs:
       - key: APP_ORIGIN
         scope: RUN_TIME
         value: ${APP_URL}
-      - key: APP_USERNAME
-        scope: RUN_TIME
-        value: admin
-      - key: DEFAULT_MODEL
-        scope: RUN_TIME
-        value: anthropic/claude-sonnet-4-5
       - key: ALLOW_INSECURE_LOOPBACK
         scope: RUN_TIME
         value: 'false'
-      # Set these encrypted runtime values in DigitalOcean before using the demo.
-      # Blank credentials deliberately prevent startup; never commit real values.
-      - key: APP_PASSWORD_HASH
-        scope: RUN_TIME
-        type: SECRET
-        value: ''
-      - key: SESSION_KEY
-        scope: RUN_TIME
-        type: SECRET
-        value: ''
-      - key: GATEWAY_TOKEN
-        scope: RUN_TIME
-        type: SECRET
-        value: ''
-      - key: ANTHROPIC_API_KEY
-        scope: RUN_TIME
-        type: SECRET
-        value: ''
-      - key: OPENAI_API_KEY
-        scope: RUN_TIME
-        type: SECRET
-        value: ''

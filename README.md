@@ -51,9 +51,11 @@ There are no backups or additional storage/database services.
    Use public HTTP port `8080`, route `/`, one instance, and disable autodeploy.
    The spec defaults to Frankfurt and `apps-s-2vcpu-4gb` (4 GiB RAM, 2 shared CPUs);
    choose another region or size in DigitalOcean if needed.
-3. Add the following **Run Time** environment variables before deploying. Select
-   **Encrypt** for every secret; copy values directly from your private `.env`
-   without surrounding shell quotes. Never commit `.env` or plaintext secrets.
+3. Under **Settings → messenger → Environment Variables**, add the following
+   **Run Time** variables. Select **Encrypt** for every secret; copy values from
+   your private `.env` without surrounding shell quotes. Component variables
+   override app-level variables, so configure these in `messenger` rather than
+   duplicating them at app level. Never commit `.env` or plaintext secrets.
 
    | Variable                                            | Value                                           |
    | --------------------------------------------------- | ----------------------------------------------- |
@@ -72,11 +74,13 @@ There are no backups or additional storage/database services.
    upload/download through the generated HTTPS URL. Delete the app after the demo.
 
 For CLI creation, use `doctl apps create --spec .do/app.yaml` after authenticating
-with `doctl auth init`. The committed spec has **blank secret placeholders**:
-its first deployment cannot become ready until you set the encrypted runtime
-values in the control panel and redeploy. Repository pushes do not apply YAML
+with `doctl auth init`. The committed spec intentionally omits credentials,
+username, and model: its first deployment cannot become ready until you set
+the runtime values under `messenger` in the control panel and redeploy.
+Repository pushes do not apply YAML
 settings automatically; edit the app settings or submit an updated app spec.
-Do not resubmit this blank-secret template over an already configured app.
+For updates, export and edit the current app spec so configured runtime values
+are preserved; do not replace a configured app with this creation template.
 
 ## Development and checks
 
