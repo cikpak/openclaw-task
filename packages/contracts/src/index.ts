@@ -9,6 +9,8 @@ export interface ProblemDetails {
 
 import type { AgentBehavior } from './agent-behavior.js';
 export * from '@messenger/contracts/agent-behavior';
+export * from '@messenger/contracts/manager';
+export * from '@messenger/contracts/browser-data';
 
 export interface ChatSettings extends Partial<AgentBehavior> {
   model: string;

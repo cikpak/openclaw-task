@@ -1,5 +1,33 @@
 # Implementation acceptance
 
+## Cloudflare implementation — 2026-10-22
+
+All five implementation phases are committed. The base repaired immutable production
+revision `a65dc7f125827904d442620fcb9cde01e13ce56a` is available at
+<https://openclaw-messenger.pages.dev>. Actual GPT-5 tool execution created a file;
+its exact bytes downloaded with zero active engine instances. A later send
+restored the same conversation, original memory, file and effective settings;
+the saved native transcript independently confirms a successful read tool call.
+
+A later Manager file-sharing fix at `df1c7d728622677a89cc580d6269ad6a0ac3c952`
+adds durable per-turn guidance for existing native sessions, while preserving
+publication boundaries, Stop and original public messages. The first AGENTS-only
+attempt failed the live existing-chat flow; the replacement and its separate
+browser evidence are described in the [release record](release-verification.md).
+
+Full local and CI application stages passed, including thirty desktop/mobile
+browser cases, recovery, Stop, restart and ten-agent capacity. Their original
+aggregate exits remain failed because test-container removal failed. A separate
+bounded exact-owned teardown repair passed seventy-three acceptance-unit tests;
+final branch-head CI must be read on [PR 1](https://github.com/cikpak/openclaw-task/pull/1).
+The [current release record](release-verification.md) separates these outcomes and
+retains the earlier failures. See [current architecture](architecture.md) and
+[operations](operations.md).
+
+The records below are **historical evidence for the earlier topology**. Their
+commands, unresolved publication status and deployment details do not describe
+the current Cloudflare runtime. Preserve failed attempts and later qualifications.
+
 The binding approved specification is the local-only `docs/plans/approved-openclaw-messenger.md`; it is not included in Git. The original local attachment is `.context/attachments/EmTrws/plan.md`. Repository readers can use [architecture.md](architecture.md) for the tracked architecture.
 
 ## Latest recorded verification 2026-10-13

@@ -32,7 +32,7 @@ afterEach(async () => {
 });
 
 async function fixture(
-  stage: 'history' | 'media',
+  stage: 'history' | 'media' | 'guidance',
   behavior: 'queue' | 'steer' = 'queue',
   failPreparation = false,
 ) {
@@ -82,11 +82,20 @@ async function fixture(
       // History need not supply a session ID: a foreign-key failure is not a submission fence.
       return { ...result, sessionId: undefined };
     });
-  } else
+  } else if (stage === 'media')
     payload.mockImplementationOnce(async () => {
       await latch.wait();
       if (failPreparation) throw new Error('late media failure');
       return [];
+    });
+  else
+    Object.assign(gateway, {
+      prepareSend: async (scope: typeof target, _id: string, text: string) => {
+        expect(scope).toEqual(target);
+        await latch.wait();
+        if (failPreparation) throw new Error('late guidance failure');
+        return { text: text + '\nPrivate per-turn context.', attachments: [] };
+      },
     });
   const command = {
     type: 'conversation.message.send' as const,
@@ -143,6 +152,24 @@ async function fixture(
 }
 
 describe('submission ownership at the Gateway invocation boundary', () => {
+  it('sends prepared native context while preserving original durable pending text and identity', async () => {
+    const f = await fixture('guidance');
+    expect(f.service.pending(f.chat.id)[0]?.text).toBe('suspended');
+    await f.finish();
+    expect(f.gateway.sends).toEqual([
+      {
+        id: f.command.commandId,
+        text: 'suspended\nPrivate per-turn context.',
+        mapping: f.target,
+      },
+    ]);
+    expect(f.service.pending(f.chat.id)[0]).toMatchObject({
+      id: f.command.commandId,
+      text: 'suspended',
+      submissionId: f.command.commandId,
+      state: 'submitted',
+    });
+  });
   // Value: steer-to-queue fallback retains every accepted input without overflowing snapshots.
   // Regression: 42 suspended steers became pending and escaped the public 41-item display bound.
   it('bounds disconnected steer fallback while retaining and later dispatching all durable inputs', async () => {
@@ -211,6 +238,8 @@ describe('submission ownership at the Gateway invocation boundary', () => {
     ['media', 'queue'],
     ['history', 'steer'],
     ['media', 'steer'],
+    ['guidance', 'queue'],
+    ['guidance', 'steer'],
   ] as const)(
     'fences discarded %s preparation for %s sends',
     async (stage, behavior) => {
@@ -245,14 +274,17 @@ describe('submission ownership at the Gateway invocation boundary', () => {
   );
 
   // Value: stale preflight errors cannot resurrect discarded work or overwrite recovery choices.
-  it('retains unknown state when blocked preparation fails after abort', async () => {
-    const f = await fixture('media', 'queue', true);
-    await f.abort();
-    await f.finish();
-    expect(f.service.pending(f.chat.id)[0]?.state).toBe('unknown');
-    expect(f.gateway.sends).toHaveLength(0);
-    expect(f.store.getChat(f.chat.id).status).toBe('recovery');
-  });
+  it.each(['media', 'guidance'] as const)(
+    'retains unknown state when blocked %s preparation fails after abort',
+    async (stage) => {
+      const f = await fixture(stage, 'queue', true);
+      await f.abort();
+      await f.finish();
+      expect(f.service.pending(f.chat.id)[0]?.state).toBe('unknown');
+      expect(f.gateway.sends).toHaveLength(0);
+      expect(f.store.getChat(f.chat.id).status).toBe('recovery');
+    },
+  );
 
   // Value: recovery followed by edit/cancel cannot revive the old revision's content.
   it.each(['edit', 'cancel'] as const)(

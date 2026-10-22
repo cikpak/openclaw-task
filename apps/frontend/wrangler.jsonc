@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "openclaw-messenger",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-10-22",
+  "services": [
+    { "binding": "BACKEND", "service": "openclaw-messenger-backend" },
+    { "binding": "MANAGER", "service": "openclaw-messenger-manager" },
+  ],
+  "env": {
+    "production": {
+      "services": [
+        { "binding": "BACKEND", "service": "openclaw-messenger-backend" },
+        { "binding": "MANAGER", "service": "openclaw-messenger-manager" },
+      ],
+    },
+    "preview": {
+      "services": [
+        { "binding": "BACKEND", "service": "openclaw-messenger-backend" },
+        { "binding": "MANAGER", "service": "openclaw-messenger-manager" },
+      ],
+    },
+  },
+}

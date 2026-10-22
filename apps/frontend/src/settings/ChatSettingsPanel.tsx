@@ -209,7 +209,7 @@ export function ChatSettingsPanel({
     setCatalogReady(false);
     try {
       const [catalogResult, localResult] = await Promise.allSettled([
-        useModelCatalog.getState().load(snapshot.chat.id),
+        useModelCatalog.getState().load(snapshot.chat.id, true),
         request(`/api/chats/${snapshot.chat.id}`),
       ]);
       if (catalogResult.status === 'fulfilled') {
@@ -352,19 +352,17 @@ export function ChatSettingsPanel({
           />
         </div>
         <ErrorNotice message={error} />
-        {error || action === 'refresh' ? (
-          <Button
-            busy={action === 'refresh'}
-            icon="refresh"
-            type="button"
-            disabled={busy || initialRead === 'loading'}
-            onClick={() => {
-              void refreshLatest();
-            }}
-          >
-            Refresh latest values and models, keep my edits
-          </Button>
-        ) : null}
+        <Button
+          busy={action === 'refresh'}
+          icon="refresh"
+          type="button"
+          disabled={busy || initialRead === 'loading'}
+          onClick={() => {
+            void refreshLatest();
+          }}
+        >
+          Refresh latest values and models, keep my edits
+        </Button>
         {refreshNote ? (
           <p role="status" className={styles.status}>
             {refreshNote}

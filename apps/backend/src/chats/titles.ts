@@ -1,6 +1,6 @@
-import type { Store } from '../database.js';
+import type { Store } from '../storage/store.js';
 import type { Gateway } from '../gateway/types.js';
-import { mapping } from './service.js';
+import { mapping } from './service-record.js';
 /** Own-agent title calls are optional and cannot override a later manual rename. */
 export class TitleCoordinator {
   private closed = false;

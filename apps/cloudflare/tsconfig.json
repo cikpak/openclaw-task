@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["@cloudflare/workers-types", "node"],
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@messenger/contracts": ["../../packages/contracts/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "*.ts", "config/**/*.ts", "test/acceptance*.ts"]
+}

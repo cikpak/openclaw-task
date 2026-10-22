@@ -1,171 +1,82 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { createRequire } from 'node:module';
-import { setTimeout as delay } from 'node:timers/promises';
-
-// This command can incur provider charges. It is never part of automated acceptance.
+import { AcceptanceClient, until } from './acceptance/client.mjs';
+// Chargeable opt-in; never part of deterministic automated acceptance.
 assert.equal(
   process.env.LIVE_PROVIDER_SMOKE,
   '1',
-  'Explicit LIVE_PROVIDER_SMOKE=1 opt-in is required',
+  'LIVE_PROVIDER_SMOKE=1 is required',
 );
 assert.ok(
   process.env.LIVE_PROVIDER_PASSWORD_FILE,
-  'Supply a private password file for the separately configured stack',
+  'Use a private password file',
 );
-const origin = process.env.LIVE_PROVIDER_ORIGIN ?? 'http://localhost:8080';
-const password = await readFile(
-  process.env.LIVE_PROVIDER_PASSWORD_FILE,
-  'utf8',
+assert.ok(
+  process.env.LIVE_PROVIDER_ORIGIN,
+  'Select the deployed public origin explicitly',
 );
-const username = process.env.LIVE_PROVIDER_USERNAME ?? 'admin';
-const name = `Disposable smoke ${randomUUID()}`;
-const require = createRequire(
-  new URL('../apps/backend/package.json', import.meta.url),
+assert.ok(
+  process.env.LIVE_PROVIDER_MODEL &&
+    !process.env.LIVE_PROVIDER_MODEL.startsWith('mock/'),
+  'Select a real provider model',
 );
-const WebSocket = require('ws');
-let cookie = '';
-let chatId;
-let socket;
-async function request(path, options = {}) {
-  return fetch(origin + path, {
-    ...options,
-    headers: {
-      origin,
-      ...(cookie ? { cookie } : {}),
-      ...(options.body ? { 'content-type': 'application/json' } : {}),
-      ...options.headers,
-    },
-  });
-}
-async function checked(path, options = {}, status = 200) {
-  const response = await request(path, options);
-  assert.equal(
-    response.status,
-    status,
-    `Smoke endpoint ${path} did not return ${status}`,
-  );
-  return response;
-}
+const connection = await new AcceptanceClient(
+  process.env.LIVE_PROVIDER_ORIGIN,
+  process.env.LIVE_PROVIDER_USERNAME ?? 'admin',
+  await readFile(process.env.LIVE_PROVIDER_PASSWORD_FILE, 'utf8'),
+).login();
+let chat;
 try {
-  await checked('/ready');
-  const login = await checked('/api/session', {
-    method: 'POST',
-    body: JSON.stringify({ username, password }),
+  const { models } = await connection.command({
+    type: 'models.list',
+    cachedOnly: false,
   });
-  cookie = login.headers.get('set-cookie')?.split(';')[0] ?? '';
-  assert.ok(cookie);
-  const { models } = await (await checked('/api/models')).json();
   const model = models.find(
-    (item) => item.available && item.id === process.env.LIVE_PROVIDER_MODEL,
+    (item) => item.id === process.env.LIVE_PROVIDER_MODEL && item.available,
   );
-  assert.ok(
-    model && !model.id.startsWith('mock/'),
-    'Choose an available external LIVE_PROVIDER_MODEL explicitly',
-  );
-  const chat = await (
-    await checked(
-      '/api/chats',
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          commandId: randomUUID(),
-          name,
-          settings: {
-            model: model.id,
-            thinkingLevel: model.thinkingDefault,
-            fastMode: false,
-          },
-        }),
-      },
-      201,
-    )
-  ).json();
-  chatId = chat.id;
-  assert.ok(chatId);
-  const createDeadline = Date.now() + 45_000;
-  let status = chat.status;
-  while (status === 'creating' && Date.now() < createDeadline) {
-    await delay(250);
-    status = (await (await checked(`/api/chats/${chatId}`)).json()).status;
-  }
-  assert.equal(
-    status,
-    'idle',
-    'The disposable smoke agent must finish initialization',
-  );
-  const frames = [];
-  socket = new WebSocket(origin.replace(/^http/u, 'ws') + '/ws/conversation', {
-    headers: { cookie, origin },
+  assert.ok(model, 'Selected provider must be available');
+  chat = await connection.create(`Disposable smoke ${randomUUID()}`, {
+    model: model.id,
+    thinkingLevel: model.thinkingDefault,
+    fastMode: false,
+    customInstructions: '',
+    responseStyle: 'default',
+    personality: 'neutral',
   });
-  socket.on('message', (raw) => {
-    frames.push(JSON.parse(raw.toString()));
+  await connection.command({
+    type: 'conversation.message.send',
+    chatId: chat.id,
+    text: 'Reply with a short greeting. Do not call tools.',
   });
-  await new Promise((resolve, reject) => {
-    socket.once('open', resolve);
-    socket.once('error', reject);
-  });
-  const commandId = randomUUID();
-  socket.send(
-    JSON.stringify({
-      type: 'conversation.message.send',
-      commandId,
-      chatId,
-      text: 'Reply with a short greeting. Do not call tools.',
-    }),
-  );
-  const deadline = Date.now() + 120_000;
-  let completed = false;
-  while (Date.now() < deadline) {
-    const failure = frames.find(
-      (frame) =>
-        frame.type === 'command.result' &&
-        frame.commandId === commandId &&
-        !frame.ok,
-    );
-    assert.ok(!failure, 'Live-provider submission was rejected');
-    const snapshot = frames.findLast(
-      (frame) =>
-        frame.type === 'conversation.snapshot' &&
-        frame.snapshot.chat.id === chatId,
-    )?.snapshot;
-    if (
-      snapshot &&
-      !snapshot.activeRun &&
-      !snapshot.pending.length &&
-      snapshot.messages.some(
-        (message) => message.role === 'assistant' && message.text.trim(),
-      )
-    ) {
-      completed = true;
-      break;
-    }
-    await delay(250);
-  }
-  assert.ok(
-    completed,
-    'Expected a completed nonempty canonical response, with no exact wording constraint',
+  await until(
+    async () => {
+      const snapshot = await connection.snapshot(chat.id);
+      return (
+        !snapshot.activeRun &&
+        !snapshot.pending.length &&
+        snapshot.messages.some(
+          (message) => message.role === 'assistant' && message.text.trim(),
+        )
+      );
+    },
+    'A nonempty completed canonical provider response is required',
+    180_000,
   );
   console.info(
-    'PASS opt-in live-provider smoke: authenticated chat, accepted input, nonempty completed canonical response. No response content or credentials logged.',
+    'PASS opt-in public-origin live provider smoke: secure session, one-use ticket, native model, durable input and completed canonical response. No content or secrets logged.',
   );
 } finally {
-  socket?.close();
-  if (cookie && !chatId) {
-    const response = await request('/api/chats');
-    if (response.ok) {
-      const { chats } = await response.json();
-      chatId = chats.find((chat) => chat.name === name)?.id;
-    }
+  if (chat) {
+    const current = await connection.command({
+      type: 'chat.get',
+      chatId: chat.id,
+    });
+    await connection.command({
+      type: 'chat.delete',
+      chatId: chat.id,
+      version: current.chat.version,
+    });
   }
-  if (chatId) {
-    const chat = await request(`/api/chats/${chatId}`);
-    if (chat.ok)
-      await request(`/api/chats/${chatId}`, {
-        method: 'DELETE',
-        headers: { 'if-match': chat.headers.get('etag') ?? '' },
-      });
-  }
-  if (cookie) await request('/api/session', { method: 'DELETE' });
+  await connection.close();
 }

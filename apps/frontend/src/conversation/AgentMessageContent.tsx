@@ -2,16 +2,30 @@ import { memo } from 'react';
 import Markdown, { defaultUrlTransform, type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import styles from './Conversation.module.css';
+import { remarkFileReferences } from './file-reference-markdown';
 import {
   AgentFileChat,
   AgentFileLink,
   isAgentFileReference,
 } from '../attachments/AgentFileLink';
 
-const plugins = [remarkGfm];
+const plugins = [remarkGfm, remarkFileReferences];
 const safeUrl = (url: string) =>
-  url.startsWith('sandbox:') ? url : defaultUrlTransform(url);
+  isAgentFileReference(url)
+    ? url
+    : /^(?:https?:|mailto:)/iu.test(url)
+      ? defaultUrlTransform(url)
+      : '';
 const components: Components = {
+  code({ children, className }) {
+    // Fenced code includes a trailing newline; only an exact inline reference
+    // becomes a download. Native paths never reach the resolver.
+    return typeof children === 'string' && isAgentFileReference(children) ? (
+      <AgentFileLink href={children}>Download file</AgentFileLink>
+    ) : (
+      <code className={className}>{children}</code>
+    );
+  },
   a({ href, children, title }) {
     if (href && isAgentFileReference(href))
       return <AgentFileLink href={href}>{children}</AgentFileLink>;

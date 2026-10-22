@@ -36,14 +36,11 @@ const salt = randomBytes(16);
 const key = await scrypt(password, salt, 64);
 const hash = `scrypt$${salt.toString('hex')}$${key.toString('hex')}`;
 let template = await readFile('.env.example', 'utf8');
-// Single quotes preserve literal dollar characters during Compose interpolation.
-template = template
-  .replace('APP_PASSWORD_HASH=', `APP_PASSWORD_HASH='${hash}'`)
-  .replace('SESSION_KEY=', `SESSION_KEY=${randomBytes(32).toString('hex')}`)
-  .replace(
-    'GATEWAY_TOKEN=',
-    `GATEWAY_TOKEN=${randomBytes(32).toString('hex')}`,
-  );
+// parseEnv preserves the scrypt separators inside single quotes.
+template = template.replace(
+  'APP_PASSWORD_HASH=',
+  `APP_PASSWORD_HASH='${hash}'`,
+);
 await writeFile(destination, template, { flag: 'wx', mode: 0o600 });
 if (process.argv.includes('--test'))
   await writeFile('.context/test-password.txt', password, {

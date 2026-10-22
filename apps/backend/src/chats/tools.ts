@@ -1,6 +1,6 @@
 import type { ToolActivity } from '@messenger/contracts';
 import { z } from 'zod';
-import type { Store } from '../database.js';
+import type { Store } from '../storage/store.js';
 const toolSchema = z.object({
   id: z.string(),
   name: z.string(),

@@ -1,0 +1,27 @@
+{
+  "name": "@messenger/cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "cf dev",
+    "build": "cf build --mode production",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts && node --test test/*.test.mjs",
+    "test:engine": "node test/engine.mjs"
+  },
+  "dependencies": {
+    "@messenger/contracts": "workspace:*",
+    "@openclaw/gateway-client": "2026.10.1",
+    "aws4fetch": "1.0.20",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "2.0.0-beta.v.3",
+    "@cloudflare/workers-types": "5.20261022.1",
+    "cf": "1.0.0-beta.19",
+    "esbuild": "0.28.2",
+    "miniflare": "5.20261019.1-beta",
+    "vite": "8.3.4",
+    "vitest": "^4.0.0"
+  }
+}

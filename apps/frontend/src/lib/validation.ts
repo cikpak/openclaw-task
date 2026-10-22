@@ -4,7 +4,7 @@ import type {
   ChatSettings,
   ChatSnapshot,
   ChatSummary,
-  ConversationFrame,
+  ManagerFrame,
   Message,
   ModelCapability,
   PendingMessage,
@@ -184,7 +184,7 @@ export const preferencesValid = (v: unknown): v is Preferences =>
   number(v.version) &&
   oneOf(v.busySendBehavior, ['queue', 'steer']) &&
   settingsValid(v.defaults);
-export function frameValid(v: unknown): v is ConversationFrame {
+export function frameValid(v: unknown): v is ManagerFrame {
   if (!record(v) || !string(v.type)) return false;
   if (v.type === 'command.result') {
     if (!string(v.commandId) || !bool(v.ok)) return false;

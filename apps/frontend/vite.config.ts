@@ -9,12 +9,23 @@ export default defineConfig({
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
   },
   server: {
+    host: '127.0.0.1',
     port: Number(process.env.FRONTEND_PORT ?? 5173),
-    proxy: {
-      '/api': 'http://127.0.0.1:3000',
-      '/health': 'http://127.0.0.1:3000',
-      '/ready': 'http://127.0.0.1:3000',
-      '/ws': { target: 'ws://127.0.0.1:3000', ws: true },
-    },
+    strictPort: true,
+    proxy: Object.fromEntries(
+      [
+        '/api',
+        '/ws',
+        '/downloads',
+        ...(process.env.CLOUDFLARE_ACCEPTANCE === '1' ? ['/__acceptance'] : []),
+      ].map((path) => [
+        path,
+        {
+          target:
+            process.env.CLOUDFLARE_PROXY_ORIGIN ?? 'http://127.0.0.1:8799',
+          ws: path === '/ws',
+        },
+      ]),
+    ),
   },
 });

@@ -211,10 +211,10 @@ function ProtectedShell() {
               aria-hidden="true"
             />
             {connection === 'ready'
-              ? 'Gateway connected'
+              ? 'Connected'
               : connection === 'connecting'
                 ? 'Connecting…'
-                : 'Gateway unavailable'}
+                : 'Connection unavailable'}
           </span>
           <Link to="/settings" className={styles.preferences}>
             <Icon name="settings" /> Settings{' '}
@@ -227,7 +227,7 @@ function ProtectedShell() {
       </div>
       {connection === 'unavailable' ? (
         <div className={styles.offline} role="status">
-          The Gateway is unavailable. Conversations will reconnect
+          The connection is unavailable. Conversations will reconnect
           automatically; drafts are kept.
         </div>
       ) : null}

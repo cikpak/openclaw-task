@@ -4,7 +4,15 @@ import type {
   ModelCapability,
   Artifact,
   ToolActivity,
+  Attachment,
 } from '@messenger/contracts';
+export interface NativeInputCancellation {
+  kind: 'pre-execution-input-cancelled';
+  inputId: string;
+  sessionId: string;
+  sessionKey: string;
+  agentId: string;
+}
 export interface GatewayMapping {
   agentId: string;
   sessionKey: string;
@@ -17,6 +25,12 @@ export interface GatewayHistory {
   hasOlderHistory: boolean;
   settings: ChatSettings;
   tools?: ToolActivity[];
+  /** Private exact native outcomes; never browser message fields. */
+  completedInputs?: string[];
+  nativeCancelledInputs?: string[];
+  /** Original app cancellation requests captured before this history read yielded. */
+  inputCancellationRequests?: string[];
+  nativeInputOwners?: { inputId: string; runId: string }[];
   receipts: {
     runId: string;
     state: 'pending' | 'consumed';
@@ -42,6 +56,7 @@ export type GatewayEvent =
       replace: boolean;
     };
 export interface Gateway {
+  readonly nativeAbortProofs?: true;
   readonly ready: boolean;
   readonly maxPayload?: number;
   start(): void;
@@ -70,6 +85,13 @@ export interface Gateway {
     mapping: GatewayMapping,
     settings: ChatSettings,
   ): Promise<ChatSettings>;
+  /** Native preparation must finish before the service rechecks dispatch ownership. */
+  prepareSend?(
+    mapping: GatewayMapping,
+    submissionId: string,
+    text: string,
+    attachments: GatewayAttachment[],
+  ): Promise<{ text: string; attachments: GatewayAttachment[] }>;
   send(
     mapping: GatewayMapping,
     submissionId: string,
@@ -77,7 +99,16 @@ export interface Gateway {
     behavior: 'queue' | 'steer',
     attachments?: GatewayAttachment[],
   ): Promise<{ runId: string; status: string }>;
-  abort(mapping: GatewayMapping): Promise<void>;
+  abort(mapping: GatewayMapping): Promise<void | { abortedRunId: string }>;
+  /** Native chat-controller cancellation. Generic IDs still require exact canonical ownership. */
+  abortChat?(
+    mapping: GatewayMapping,
+  ): Promise<void | { runIds: string[]; inputs: NativeInputCancellation[] }>;
+  /** Native-only exact execution selector; broad session cleanup remains separate. */
+  abortRun?(
+    mapping: GatewayMapping,
+    runId: string,
+  ): Promise<void | { abortedRunId: string }>;
   artifacts?(mapping: GatewayMapping): Promise<Artifact[]>;
   resolveArtifact?(mapping: GatewayMapping, path: string): Promise<Artifact>;
   artifact?(
@@ -86,6 +117,12 @@ export interface Gateway {
   ): Promise<{ artifact: Artifact; bytes: Buffer }>;
 }
 export interface GatewayAttachment {
+  /** Private manager/helper handoff only; never serialized as native attachment DTO. */
+  originalAttachment?: Attachment | undefined;
+  nativePath?: string | undefined;
+  nativeReadNote?: string | undefined;
+  nativeReadFiles?:
+    { path: string; name: string; mimeType: string }[] | undefined;
   type: 'image' | 'file';
   mimeType: string;
   fileName: string;

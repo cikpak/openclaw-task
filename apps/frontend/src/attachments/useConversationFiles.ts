@@ -67,7 +67,6 @@ export function useConversationFiles(chatId: string, open: boolean) {
               if (
                 !record(data) ||
                 !Array.isArray(data.files) ||
-                data.files.length > 100 ||
                 !data.files.every(attachmentValid)
               )
                 throw new Error('Shared files could not be loaded.');
@@ -83,7 +82,6 @@ export function useConversationFiles(chatId: string, open: boolean) {
               if (
                 !record(data) ||
                 !Array.isArray(data.artifacts) ||
-                data.artifacts.length > 100 ||
                 !data.artifacts.every(artifactValid)
               )
                 throw new Error('Agent files could not be loaded.');

@@ -1,9 +1,9 @@
+import { application } from './manager-client.js';
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import type { APIRequestContext, Locator, Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { ChatSettings, ChatSummary } from '@messenger/contracts';
 
-process.loadEnvFile('.context/test.env');
 const origin =
   process.env.ACCEPTANCE_ORIGIN ??
   `http://localhost:${process.env.ACCEPTANCE_PORT ?? 18080}`;
@@ -15,7 +15,12 @@ export async function login(page: Page) {
     .fill(process.env.APP_USERNAME ?? 'admin');
   await page
     .getByLabel('Password', { exact: true })
-    .fill(await readFile('.context/test-password.txt', 'utf8'));
+    .fill(
+      await readFile(
+        process.env.ACCEPTANCE_PASSWORD_FILE ?? '.context/test-password.txt',
+        'utf8',
+      ),
+    );
   async function submit() {
     const [response] = await Promise.all([
       page.waitForResponse(
@@ -42,9 +47,7 @@ export async function login(page: Page) {
   }
   expect(response.status(), 'Test credentials must authenticate').toBe(200);
   await expect(page).toHaveURL(/\/$/u);
-  await expect(
-    page.getByText('Gateway connected', { exact: true }),
-  ).toBeVisible();
+  await expect(page.locator('[data-connection-state="ready"]')).toBeVisible();
 }
 
 export async function mobileTarget(page: Page, target: Locator) {
@@ -55,8 +58,16 @@ export async function mobileTarget(page: Page, target: Locator) {
     box,
     'An interactive mobile control must have a rendered target',
   ).not.toBeNull();
-  expect(box?.width ?? 0, 'Mobile target width').toBeGreaterThanOrEqual(44);
-  expect(box?.height ?? 0, 'Mobile target height').toBeGreaterThanOrEqual(44);
+  // Chromium's float32 box coordinates can undershoot exact CSS sizes by micro-pixels.
+  const measurementEpsilon = 0.0001;
+  expect(
+    (box?.width ?? 0) + measurementEpsilon,
+    'Mobile target width',
+  ).toBeGreaterThanOrEqual(44);
+  expect(
+    (box?.height ?? 0) + measurementEpsilon,
+    'Mobile target height',
+  ).toBeGreaterThanOrEqual(44);
 }
 
 export async function readableField(field: Locator) {
@@ -67,32 +78,32 @@ export async function readableField(field: Locator) {
   ).toBeGreaterThanOrEqual(16);
 }
 
-export async function catalog(api: APIRequestContext) {
-  const response = await api.get('/api/chats');
+export async function catalog(page: Page) {
+  const response = await application(page).get('/api/chats');
   expect(response.status()).toBe(200);
   return ((await response.json()) as { chats: ChatSummary[] }).chats;
 }
 
-export async function cleanChats(api: APIRequestContext) {
-  for (const chat of await catalog(api)) {
-    const response = await api.delete(`/api/chats/${chat.id}`, {
+export async function cleanChats(page: Page) {
+  for (const chat of await catalog(page)) {
+    const response = await application(page).delete(`/api/chats/${chat.id}`, {
       headers: { origin, 'If-Match': `"${chat.version}"` },
     });
     if (response.status() === 404) {
       // The previous Gateway/media probe may already be completing deletion.
       // Accept disappearance only after the catalog confirms this exact ID is gone.
       expect(
-        (await catalog(api)).some((current) => current.id === chat.id),
+        (await catalog(page)).some((current) => current.id === chat.id),
       ).toBe(false);
     } else {
       expect([202, 204]).toContain(response.status());
     }
   }
   await expect
-    .poll(async () => (await catalog(api)).length, { timeout: 45_000 })
+    .poll(async () => (await catalog(page)).length, { timeout: 45_000 })
     .toBe(0);
-  const preferences = await api.get('/api/preferences');
-  const saved = await api.patch('/api/preferences', {
+  const preferences = await application(page).get('/api/preferences');
+  const saved = await application(page).patch('/api/preferences', {
     headers: { origin, 'If-Match': preferences.headers().etag ?? '' },
     data: {
       busySendBehavior: 'queue',
@@ -189,4 +200,17 @@ export async function goChat(page: Page, id: string) {
     .locator(`nav[aria-label="Conversations"] a[href="/chat/${id}"]`)
     .click();
   await expect(page.getByRole('textbox', { name: /^Message /u })).toBeVisible();
+}
+
+/** Live capability verification is a deliberate action; opening cached settings stays asleep. */
+export async function refreshAgentSettings(dialog: Locator) {
+  const refresh = dialog.getByRole('button', {
+    name: 'Refresh latest values and models, keep my edits',
+  });
+  await expect(refresh).toBeVisible();
+  await refresh.click();
+  await expect(
+    dialog.getByText('Latest saved values:', { exact: false }),
+  ).toBeVisible();
+  await expect(refresh).toBeEnabled();
 }

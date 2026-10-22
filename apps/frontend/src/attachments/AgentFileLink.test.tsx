@@ -2,119 +2,225 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, it, vi } from 'vitest';
 import { AgentMessageContent } from '../conversation/AgentMessageContent';
+import { registerApplicationDispatcher } from '../lib/manager';
 import { artifactValid } from '../lib/validation';
 
-const artifact = {
+const file = {
   id: 'opaque-document',
   name: 'review.txt',
   mimeType: 'text/plain',
   sizeBytes: 4,
-  sourcePath: 'documents/review.txt',
+  category: 'deliverable' as const,
+  updatedAt: 1,
 };
-const response = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
+it('downloads a bare prose publication reference without rewriting URLs or code examples', async () => {
+  const dispatch = vi.fn().mockResolvedValue({
+    file,
+    download: {
+      url: `/downloads/${'d'.repeat(64)}`,
+      expiresAt: Date.now() + 60000,
+    },
   });
-
-it('resolves a local file within its chat and downloads authenticated bytes without opening a model URL', async () => {
-  let finish: (value: Response) => void = () => undefined;
-  const fetch = vi
-    .fn()
-    .mockImplementationOnce(
-      () =>
-        new Promise<Response>((resolve) => {
-          finish = resolve;
-        }),
-    )
-    .mockResolvedValueOnce(new Response('data'));
-  vi.stubGlobal('fetch', fetch);
-  const create = vi
-    .spyOn(URL, 'createObjectURL')
-    .mockReturnValue('blob:download');
-  const revoke = vi
-    .spyOn(URL, 'revokeObjectURL')
-    .mockImplementation(() => undefined);
+  registerApplicationDispatcher(dispatch);
   const click = vi
     .spyOn(HTMLAnchorElement.prototype, 'click')
     .mockImplementation(() => undefined);
+  const { container } = render(
+    <AgentMessageContent
+      chatId="chat-a"
+      text={
+        'Downloaded README: file:opaque-document.\n\n```\nfile:opaque-document\n```\n\n[Example file:opaque-document](https://example.com/file:opaque-document)\n\n`example file:opaque-document` not-file:opaque-document file:' +
+        'x'.repeat(129)
+      }
+    />,
+  );
+  expect(screen.getAllByRole('button')).toHaveLength(1);
+  expect(container.querySelector('pre code')).toHaveTextContent(
+    'file:opaque-document',
+  );
+  expect(
+    screen.getByRole('link', { name: 'Example file:opaque-document' }),
+  ).toHaveAttribute('href', 'https://example.com/file:opaque-document');
+  await userEvent.click(screen.getByRole('button', { name: 'Download file' }));
+  expect(dispatch).toHaveBeenCalledWith({
+    type: 'files.resolve',
+    commandId: expect.any(String) as string,
+    chatId: 'chat-a',
+    fileId: 'opaque-document',
+  });
+  await waitFor(() => expect(click).toHaveBeenCalledOnce());
+});
+it('downloads an exact inline-code publication reference and leaves fenced code and other literals inert', async () => {
+  const dispatch = vi.fn().mockResolvedValue({
+    file,
+    download: {
+      url: `/downloads/${'c'.repeat(64)}`,
+      expiresAt: Date.now() + 60000,
+    },
+  });
+  registerApplicationDispatcher(dispatch);
+  const click = vi
+    .spyOn(HTMLAnchorElement.prototype, 'click')
+    .mockImplementation(function (this: HTMLAnchorElement) {
+      expect(this.download).toBe('review.txt');
+      expect(this.getAttribute('href')).toBe(`/downloads/${'c'.repeat(64)}`);
+    });
+  const { container } = render(
+    <AgentMessageContent
+      chatId="chat-a"
+      text={
+        'Saved `file:opaque-document`.\n\n```\nfile:opaque-document\n```\n\n`documents/private.txt:1` and `example file:opaque-document`'
+      }
+    />,
+  );
+  expect(container.querySelector('pre code')).toHaveTextContent(
+    'file:opaque-document',
+  );
+  expect(screen.getAllByRole('button')).toHaveLength(1);
+  await userEvent.click(screen.getByRole('button', { name: 'Download file' }));
+  expect(dispatch).toHaveBeenCalledWith({
+    type: 'files.resolve',
+    commandId: expect.any(String) as string,
+    chatId: 'chat-a',
+    fileId: 'opaque-document',
+  });
+  await waitFor(() => expect(click).toHaveBeenCalledOnce());
+});
+it('resolves only an opaque file ID over the authenticated manager and navigates to its short lived download', async () => {
+  let finish!: (value: {
+    file: typeof file;
+    download: { url: string; expiresAt: number };
+  }) => void;
+  const dispatch = vi.fn(
+    () =>
+      new Promise<{
+        file: typeof file;
+        download: { url: string; expiresAt: number };
+      }>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  registerApplicationDispatcher(dispatch);
+  const fetcher = vi.fn();
+  vi.stubGlobal('fetch', fetcher);
+  const click = vi
+    .spyOn(HTMLAnchorElement.prototype, 'click')
+    .mockImplementation(function (this: HTMLAnchorElement) {
+      expect(this.getAttribute('href')).toBe(`/downloads/${'a'.repeat(64)}`);
+      expect(this.download).toBe('review.txt');
+    });
   render(
     <AgentMessageContent
       chatId="chat-a"
-      text="[Download review](documents/review.txt)"
+      text="[Download review](file:opaque-document)"
     />,
   );
   const button = screen.getByRole('button', { name: 'Download review' });
   await userEvent.click(button);
   expect(button).toBeDisabled();
   expect(button).toHaveAttribute('aria-busy', 'true');
-  expect(screen.queryByRole('link')).not.toBeInTheDocument();
-  expect(fetch).toHaveBeenCalledTimes(1);
-  expect(fetch.mock.calls[0]?.[0]).toBe(
-    '/api/chats/chat-a/artifacts/resolve?path=documents%2Freview.txt',
-  );
+  expect(dispatch).toHaveBeenCalledWith({
+    type: 'files.resolve',
+    commandId: expect.any(String) as string,
+    chatId: 'chat-a',
+    fileId: 'opaque-document',
+  });
   await act(async () => {
-    finish(response({ artifact }));
     await Promise.resolve();
+    finish({
+      file,
+      download: {
+        url: `/downloads/${'a'.repeat(64)}`,
+        expiresAt: Date.now() + 60000,
+      },
+    });
   });
   await waitFor(() => expect(click).toHaveBeenCalledOnce());
-  expect(fetch.mock.calls[1]?.[0]).toBe(
-    '/api/chats/chat-a/artifacts/opaque-document',
-  );
-  expect(fetch.mock.calls[1]?.[1]).toMatchObject({
-    credentials: 'same-origin',
-  });
-  expect(create).toHaveBeenCalledOnce();
-  expect(revoke).toHaveBeenCalledWith('blob:download');
+  expect(fetcher).not.toHaveBeenCalled();
   expect(button).toBeEnabled();
 });
-
 it.each([
-  'sandbox:/home/node/.openclaw/workspace/messenger-chat-a/documents/review.txt',
-  '/home/node/.openclaw/workspace/messenger-chat-a/documents/review.txt',
+  'sandbox:/home/node/.openclaw/workspace/documents/review.txt',
+  '/home/node/.openclaw/workspace/documents/review.txt',
   '../other-agent/private.txt',
+  'documents/review.txt',
 ])(
-  'sends local reference %s only to the authenticated resolver and fails visibly without navigating',
-  async (href) => {
-    const fetch = vi
-      .fn()
-      .mockResolvedValue(
-        response(
-          { detail: 'This file is not available in this conversation.' },
-          404,
-        ),
-      );
-    vi.stubGlobal('fetch', fetch);
+  'never sends native reference %s to a resolver or browser navigation',
+  (href) => {
+    const dispatch = vi.fn();
+    registerApplicationDispatcher(dispatch);
+    const fetcher = vi.fn();
+    vi.stubGlobal('fetch', fetcher);
     render(
       <AgentMessageContent
         chatId="chat-a"
         text={`[Download review](${href})`}
       />,
     );
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Download review' }),
-    );
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'This file is not available in this conversation.',
-    );
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(fetch.mock.calls[0]?.[0]).toBe(
-      `/api/chats/chat-a/artifacts/resolve?path=${encodeURIComponent(href)}`,
-    );
-    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByText('Download review').closest('a')).toBeNull();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(fetcher).not.toHaveBeenCalled();
   },
 );
-
-it('does not fetch files or external images on render and keeps external links unchanged', () => {
-  const fetch = vi.fn();
-  vi.stubGlobal('fetch', fetch);
+it('shows a manager resolution error without navigating', async () => {
+  registerApplicationDispatcher(
+    vi
+      .fn()
+      .mockRejectedValue(
+        new Error('This file is not available in this conversation.'),
+      ),
+  );
+  const click = vi
+    .spyOn(HTMLAnchorElement.prototype, 'click')
+    .mockImplementation(() => undefined);
   render(
     <AgentMessageContent
       chatId="chat-a"
-      text="[Document](documents/review.txt) [Website](https://example.com) [Unsafe](javascript:alert(1))\n\n![Remote](https://example.com/image.png)"
+      text="[Download](file:opaque-document)"
     />,
   );
-  expect(fetch).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole('button', { name: 'Download' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'This file is not available in this conversation.',
+  );
+  expect(click).not.toHaveBeenCalled();
+});
+it('rejects nonapplication download URLs returned by a malformed result', async () => {
+  registerApplicationDispatcher(
+    vi.fn().mockResolvedValue({
+      file,
+      download: {
+        url: 'https://untrusted.example/file',
+        expiresAt: Date.now() + 60000,
+      },
+    }),
+  );
+  const click = vi
+    .spyOn(HTMLAnchorElement.prototype, 'click')
+    .mockImplementation(() => undefined);
+  render(
+    <AgentMessageContent
+      chatId="chat-a"
+      text="[Download](file:opaque-document)"
+    />,
+  );
+  await userEvent.click(screen.getByRole('button', { name: 'Download' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'This file could not be downloaded.',
+  );
+  expect(click).not.toHaveBeenCalled();
+});
+it('does not fetch files or images on render and keeps external links unchanged', () => {
+  const fetcher = vi.fn();
+  vi.stubGlobal('fetch', fetcher);
+  render(
+    <AgentMessageContent
+      chatId="chat-a"
+      text="[Document](file:opaque-document) [Website](https://example.com) [Unsafe](javascript:alert(1))\n\n![Remote](https://example.com/image.png)"
+    />,
+  );
+  expect(fetcher).not.toHaveBeenCalled();
   expect(screen.getByRole('link', { name: 'Website' })).toHaveAttribute(
     'target',
     '_blank',
@@ -122,42 +228,46 @@ it('does not fetch files or external images on render and keeps external links u
   expect(screen.getByText('Unsafe').closest('a')).toBeNull();
   expect(document.querySelector('img')).toBeNull();
 });
-
-it('aborts a pending download on chat changes and never transfers the old response into the next chat', async () => {
-  let finish: (value: Response) => void = () => undefined;
-  const fetch = vi.fn(
+it('ignores a late resolution after the active chat changes', async () => {
+  let finish!: (value: unknown) => void;
+  const dispatch = vi.fn(
     () =>
-      new Promise<Response>((resolve) => {
+      new Promise((resolve) => {
         finish = resolve;
       }),
   );
-  vi.stubGlobal('fetch', fetch);
+  registerApplicationDispatcher(dispatch as never);
+  const click = vi
+    .spyOn(HTMLAnchorElement.prototype, 'click')
+    .mockImplementation(() => undefined);
   const { rerender } = render(
     <AgentMessageContent
       chatId="chat-a"
-      text="[Download](documents/review.txt)"
+      text="[Download](file:opaque-document)"
     />,
   );
   await userEvent.click(screen.getByRole('button', { name: 'Download' }));
-  const signal = (fetch.mock.calls[0] as unknown as [string, RequestInit])[1]
-    .signal!;
   rerender(
     <AgentMessageContent
       chatId="chat-b"
-      text="[Download](documents/review.txt)"
+      text="[Download](file:opaque-document)"
     />,
   );
-  expect(signal.aborted).toBe(true);
   await act(async () => {
-    finish(response({ artifact }));
     await Promise.resolve();
+    finish({
+      file,
+      download: {
+        url: `/downloads/${'b'.repeat(64)}`,
+        expiresAt: Date.now() + 60000,
+      },
+    });
   });
-  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(click).not.toHaveBeenCalled();
   expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled();
 });
-
-it('rejects leaked absolute, hidden, traversal and malformed paths in file catalog metadata', () => {
-  expect(artifactValid(artifact)).toBe(true);
+it('rejects native paths in browser catalog metadata', () => {
+  expect(artifactValid(file)).toBe(true);
   for (const sourcePath of [
     '/home/node/private.txt',
     '../private.txt',
@@ -168,5 +278,5 @@ it('rejects leaked absolute, hidden, traversal and malformed paths in file catal
     'documents/\u0000.txt',
     '',
   ])
-    expect(artifactValid({ ...artifact, sourcePath })).toBe(false);
+    expect(artifactValid({ ...file, sourcePath })).toBe(false);
 });

@@ -1,3 +1,4 @@
+import { testConnectionTicket } from '../test/socket';
 import {
   act,
   fireEvent,
@@ -64,22 +65,24 @@ beforeEach(() => {
       Promise.resolve(
         new Response(
           JSON.stringify(
-            url === '/api/session'
-              ? { authenticated: true }
-              : url === '/api/chats'
-                ? {
-                    chats: [
-                      snapshot.chat,
-                      { ...snapshot.chat, id: 'chat-b', name: 'Writing' },
-                    ],
-                  }
-                : url.startsWith('/api/models')
-                  ? { models }
-                  : {
-                      version: 1,
-                      defaults: snapshot.chat.settings,
-                      busySendBehavior: 'queue',
-                    },
+            url === '/api/connection-tickets'
+              ? testConnectionTicket()
+              : url === '/api/session'
+                ? { authenticated: true }
+                : url === '/api/chats'
+                  ? {
+                      chats: [
+                        snapshot.chat,
+                        { ...snapshot.chat, id: 'chat-b', name: 'Writing' },
+                      ],
+                    }
+                  : url.startsWith('/api/models')
+                    ? { models }
+                    : {
+                        version: 1,
+                        defaults: snapshot.chat.settings,
+                        busySendBehavior: 'queue',
+                      },
           ),
           { headers: { 'Content-Type': 'application/json' } },
         ),
@@ -91,23 +94,26 @@ afterEach(() => {
   Reflect.deleteProperty(HTMLDivElement.prototype, 'scrollIntoView');
 });
 async function conversation() {
-  render(
-    <>
-      <style>{scopedCss}</style>
-      <MemoryRouter initialEntries={['/chat/chat-a']}>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </MemoryRouter>
-    </>,
-  );
-  await screen.findByRole('textbox', { name: 'Message Research' });
-  await waitFor(() =>
-    expect(useChatProjection.getState().generation).toBe('test'),
-  );
+  // Flush the mocked session, ticket and initial snapshot microtasks before
+  // querying the full conversation DOM. Polling that DOM can otherwise starve
+  // the initial promise chain when workspace test suites run concurrently.
   await act(async () => {
+    render(
+      <>
+        <style>{scopedCss}</style>
+        <MemoryRouter initialEntries={['/chat/chat-a']}>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </MemoryRouter>
+      </>,
+    );
     await Promise.resolve();
   });
+  expect(
+    screen.getByRole('textbox', { name: 'Message Research' }),
+  ).toBeVisible();
+  expect(useChatProjection.getState().generation).toBe('test');
   const viewport = document.querySelector<HTMLElement>(`.${styles.history}`);
   if (!viewport) throw new Error('Missing conversation viewport');
   return viewport;

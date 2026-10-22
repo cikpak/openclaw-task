@@ -2,6 +2,47 @@
 
 ## Unreleased
 
+### Cloudflare issue repairs
+
+- Enlarge generated-file cards and download icons, align name and size in one
+  row, and truncate long filenames without changing the original download name.
+- Resolve published file references with native line/column citations and render
+  code and prose references as authenticated downloads, keeping private paths hidden.
+- Include durable file-sharing guidance with each native message so existing and
+  new agents save deliverables in `documents/`. Keep preparation before the Stop
+  fence and hide the exact private context from public history.
+- Activate the supported direct Codex tool-loading configuration before dispatch,
+  preserving the model, tool permissions and unrelated restored configuration.
+- Retain exact native Stop acknowledgements across delayed history visibility and
+  separately prove cancellation before execution. Scope receipts and history reads
+  to the original request so replacement messages cannot inherit stale authority.
+- Reject closed or failed verification-socket writes immediately without replaying
+  mutations or waiting for an unrelated command timeout.
+- Make the isolated restart fault control validate the exact Gateway process and
+  await native child cleanup within its existing deadline before ordinary restart.
+- Let exact test-container cleanup settle classified concurrent Docker removals
+  within a bounded interval, retaining final absence, closed-port and unrelated
+  container checks and publishing safe failure evidence in CI.
+
+### Cloudflare migration
+
+- Keep Pages frontend, Backend/D1 authentication and SQLite manager available
+  independently of the sleeping OpenClaw container. Application data uses an
+  authorized manager socket; admission and exact-session downloads stay HTTP.
+- Add durable wake/idle preservation, option-B cancellation until final stop,
+  helper-only restored boots, private native SDK identity and direct R2 recovery.
+- Stage uploads without wake; protect live/asleep downloads with one-minute
+  single-use permissions, explicit publication and independent reader pins.
+- Cache whole safe messages by measured viewport and recover complete long native
+  replies without turning display limits into retention policy.
+- Replace active Compose/Caddy/DigitalOcean deployment with an isolated Cloudflare
+  workflow and manual local deployment; CI checks only. Preserve old evidence as
+  historical and update the separate OpenClaw documentation project.
+- Verify the real GPT-5 production cycle: file creation, automatic save/stop,
+  exact-session download without waking, fresh restore, original conversation
+  memory and native file reading. Keep these results separate from provider-free
+  tests; the original invalid key is not shipped.
+
 ### Latest settings and interaction updates
 
 - Added custom instructions, response style and personality to application

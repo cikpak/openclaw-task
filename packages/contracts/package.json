@@ -4,7 +4,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./agent-behavior": "./src/agent-behavior.ts"
+    "./agent-behavior": "./src/agent-behavior.ts",
+    "./manager": "./src/manager.ts",
+    "./browser-data": "./src/browser-data.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

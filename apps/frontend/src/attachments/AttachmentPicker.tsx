@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import type { Attachment } from '@messenger/contracts';
 import { errorMessage, request } from '../lib/api';
-import { attachmentValid, record } from '../lib/validation';
+import { uploadAttachment } from './upload';
 import { ErrorNotice } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
@@ -44,7 +44,6 @@ export function AttachmentPicker({
     const accepted: Attachment[] = [];
     try {
       for (const file of selection) {
-        const body = new FormData();
         const name = file.name.toLowerCase();
         const inferred =
           name.endsWith('.md') || name.endsWith('.markdown')
@@ -56,17 +55,7 @@ export function AttachmentPicker({
           (!file.type || file.type === 'application/octet-stream') && inferred
             ? new File([file], file.name, { type: inferred })
             : file;
-        body.append('file', uploadFile);
-        const { data } = await request('/api/uploads', {
-          method: 'POST',
-          body,
-        });
-        const item =
-          record(data) && attachmentValid(data.attachment)
-            ? data.attachment
-            : data;
-        if (!attachmentValid(item))
-          throw new Error('Upload response was invalid. Please try again.');
+        const item = await uploadAttachment(uploadFile);
         accepted.push(item);
       }
       onChange([...attachments, ...accepted]);

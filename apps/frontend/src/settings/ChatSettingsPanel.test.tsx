@@ -1,3 +1,4 @@
+import { testConnectionTicket } from '../test/socket';
 import { chooseOption } from '../test/select';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -40,6 +41,10 @@ function fixture() {
   vi.stubGlobal(
     'fetch',
     vi.fn((url: string, options: RequestInit = {}) => {
+      if (url === '/api/connection-tickets')
+        return Promise.resolve(
+          new Response(JSON.stringify(testConnectionTicket())),
+        );
       if (options.method === 'PATCH') {
         writes.push({ url, options });
         if (

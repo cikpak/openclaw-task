@@ -2,18 +2,22 @@ import type {
   ChatSnapshot,
   ConversationEvent,
   SettingsOperation,
+  PendingMessage,
 } from '@messenger/contracts';
-import type { ChatRecord, Store } from '../database.js';
+import type { ChatRecord, Store } from '../storage/store.js';
 import type { Gateway, GatewayHistory } from '../gateway/types.js';
 import { ConflictError } from '../errors.js';
-import { mapping } from './service.js';
+import { mapping } from './service-record.js';
 import { reconcileInputs } from './queue.js';
 import { historyWithReceipts } from './history.js';
+import { abortAcceptedInputs } from './cancellations.js';
 export interface LifecycleContext {
   store: Store;
   gateway: Gateway;
   readonly closed: boolean;
   streams: Map<string, NonNullable<ChatSnapshot['activeRun']>>;
+  locallyUninvoked?: (item: PendingMessage) => boolean;
+  invalidateUninvoked?(chatId: string): void;
   projectHistory(id: string, history: GatewayHistory): GatewayHistory;
   changed(id: string): void;
   publish(
@@ -67,18 +71,26 @@ export async function applySettings(
 ): Promise<void> {
   try {
     if (operation.policy === 'cancel-work') {
+      ctx.invalidateUninvoked?.(chat.id);
       for (const item of ctx.store.pending(chat.id))
         if (item.state === 'pending') ctx.store.removePending(item.id);
-      await ctx.gateway.abort(mapping(chat));
+      await abortAcceptedInputs(ctx.store, ctx.gateway, chat);
       const history = ctx.projectHistory(
         chat.id,
         await historyWithReceipts(
           ctx.gateway,
           mapping(chat),
           ctx.store.pending(chat.id).map((item) => item.submissionId),
+          ctx.store,
         ),
       );
-      reconcileInputs(ctx.store, chat.id, history);
+      reconcileInputs(
+        ctx.store,
+        chat.id,
+        history,
+        ctx.locallyUninvoked,
+        !ctx.gateway.nativeAbortProofs,
+      );
       if (history.activeRun || ctx.store.pending(chat.id).length)
         throw new ConflictError(
           'WORK_CANCELLATION_PENDING',

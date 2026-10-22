@@ -1,4 +1,3 @@
-import { TextDecoder } from 'node:util';
 import { ApplicationError, ValidationError } from '../errors.js';
 
 export const FILE_LIMIT = 5 * 1024 * 1024;
@@ -30,7 +29,7 @@ export function safeFilename(name: string): string {
     .slice(0, 150)
     .join('');
 }
-export function validateFile(bytes: Buffer, declared: string): string {
+export function validateFile(bytes: Uint8Array, declared: string): string {
   if (!bytes.length) throw new ValidationError('The attached file is empty.');
   if (bytes.length > FILE_LIMIT)
     throw new ApplicationError(
@@ -45,15 +44,15 @@ export function validateFile(bytes: Buffer, declared: string): string {
       'UNSUPPORTED_ATTACHMENT',
       'Attach PNG, JPEG, WebP, UTF-8 text, Markdown, or PDF.',
     );
-  const png = bytes
-    .subarray(0, 8)
-    .equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  const png = [137, 80, 78, 71, 13, 10, 26, 10].every(
+    (byte, index) => bytes[index] === byte,
+  );
   const jpeg = bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
   const webp =
-    bytes.subarray(0, 4).toString('ascii') === 'RIFF' &&
-    bytes.subarray(8, 12).toString('ascii') === 'WEBP';
+    String.fromCharCode(...bytes.subarray(0, 4)) === 'RIFF' &&
+    String.fromCharCode(...bytes.subarray(8, 12)) === 'WEBP';
   const pdf = /^%PDF-1\.[0-9]|^%PDF-2\.0/.test(
-    bytes.subarray(0, 8).toString('ascii'),
+    String.fromCharCode(...bytes.subarray(0, 8)),
   );
   if (
     (mime === 'image/png' && !png) ||

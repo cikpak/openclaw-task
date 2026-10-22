@@ -1,6 +1,8 @@
+import { mockManager } from './manager-fixtures.js';
+import { application } from './manager-client.js';
 import { mkdir } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import { cleanChats, createChat, login } from './helpers.js';
+import { cleanChats, createChat, idle, login } from './helpers.js';
 
 test('files sidetab loads in place, closes accessibly and keeps chat geometry stable', async ({
   page,
@@ -9,7 +11,7 @@ test('files sidetab loads in place, closes accessibly and keeps chat geometry st
     /^messenger-acceptance-[a-z0-9-]+$/u,
   );
   await login(page);
-  const modelsReply = await page.request.get('/api/models');
+  const modelsReply = await application(page).get('/api/models?refresh=true');
   expect(modelsReply.ok()).toBe(true);
   const catalog = (await modelsReply.json()) as {
     models: Array<{ id: string }>;
@@ -17,56 +19,63 @@ test('files sidetab loads in place, closes accessibly and keeps chat geometry st
   expect(catalog.models.some((model) => model.id === 'mock/test-model')).toBe(
     true,
   );
-  await cleanChats(page.request);
+  await cleanChats(page);
   await createChat(page, 'Files panel');
+  // Creation acknowledges durable acceptance before native materialization.
+  // Isolate file-panel caching from that legitimate later catalog invalidation.
+  await idle(page);
   const reads = { agent: 0, shared: 0 };
   let failAgent = false;
-  await page.route('**/api/chats/*/artifacts', async (route) => {
-    reads.agent++;
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    if (failAgent) {
-      await route.fulfill({
-        status: 503,
-        json: {
-          type: 'about:blank',
-          title: 'Agent file refresh unavailable',
-          status: 503,
-          detail: 'Agent file refresh unavailable.',
-          code: 'fixture',
-          correlationId: 'synthetic-files',
-        },
-      });
-      return;
-    }
-    await route.fulfill({
-      json: {
-        artifacts: [
-          {
-            id: 'fixture-file',
-            name: 'notes.txt',
-            mimeType: 'text/plain',
-            sizeBytes: 2048,
+  let snapshotReady = false;
+  await mockManager(
+    page,
+    async (command) => {
+      if (command.type !== 'files.list') return undefined;
+      const generated = command.category === 'generated';
+      reads[generated ? 'agent' : 'shared']++;
+      await new Promise((resolve) =>
+        setTimeout(resolve, generated ? 700 : 1300),
+      );
+      if (generated && failAgent)
+        return {
+          error: {
+            type: 'about:blank',
+            title: 'Agent file refresh unavailable',
+            status: 503,
+            detail: 'Agent file refresh unavailable.',
+            code: 'fixture',
+            correlationId: 'synthetic-files',
           },
-        ],
-      },
-    });
-  });
-  await page.route('**/api/chats/*/shared-files', async (route) => {
-    reads.shared++;
-    await new Promise((resolve) => setTimeout(resolve, 1300));
-    await route.fulfill({
-      json: {
+        };
+      return {
         files: [
           {
-            uploadId: 'synthetic-upload',
-            name: 'sent-notes.txt',
+            id: generated ? 'fixture-file' : 'synthetic-upload',
+            name: generated ? 'notes.txt' : 'sent-notes.txt',
             mimeType: 'text/plain',
-            size: 2048,
+            sizeBytes: 2048,
+            category: generated ? 'deliverable' : 'input',
+            updatedAt: Date.now(),
           },
         ],
-      },
-    });
-  });
+      };
+    },
+    (result, command) => {
+      if (
+        result.ok &&
+        command?.type === 'conversation.recent.request' &&
+        result.data.snapshot
+      )
+        snapshotReady = true;
+      return result;
+    },
+  );
+  await page.reload();
+  await expect.poll(() => snapshotReady).toBe(true);
+  await idle(page);
+  await expect(
+    page.getByText('Loading conversation…', { exact: true }),
+  ).not.toBeVisible();
   const composer = page.getByRole('textbox', {
     name: 'Message Files panel',
     exact: true,
@@ -113,7 +122,7 @@ test('files sidetab loads in place, closes accessibly and keeps chat geometry st
   await expect(trigger).toBeFocused();
   await expect(panel).not.toBeVisible();
   await trigger.click();
-  await expect(panel.getByRole('link', { name: /notes.txt/u })).toBeVisible();
+  await expect(panel.getByRole('button', { name: /notes.txt/u })).toBeVisible();
   const shared = panel.getByRole('region', {
     name: 'Shared with agent',
     exact: true,
@@ -123,10 +132,9 @@ test('files sidetab loads in place, closes accessibly and keeps chat geometry st
     shared.getByText('sent-notes.txt', { exact: false }),
   ).toBeVisible();
   await expect(shared.getByRole('link')).toHaveCount(0);
-  await expect(agent.getByRole('link', { name: /notes.txt/u })).toHaveAttribute(
-    'download',
-    'notes.txt',
-  );
+  await expect(
+    agent.getByRole('button', { name: /notes.txt/u }),
+  ).toHaveAttribute('type', 'button');
   await expect(
     panel.getByRole('status', { name: 'Loading conversation files' }),
   ).not.toBeVisible();
@@ -141,16 +149,12 @@ test('files sidetab loads in place, closes accessibly and keeps chat geometry st
   await expect(
     shared.getByText('sent-notes.txt', { exact: false }),
   ).toBeVisible();
-  await expect(agent.getByRole('link', { name: /notes.txt/u })).toBeVisible();
+  await expect(agent.getByRole('button', { name: /notes.txt/u })).toBeVisible();
   expect(reads).toEqual({ agent: 2, shared: 2 });
   failAgent = false;
-  const retryReply = page.waitForResponse((response) =>
-    new URL(response.url()).pathname.endsWith('/artifacts'),
-  );
   await agent
     .getByRole('button', { name: 'Retry agent files', exact: true })
     .click();
-  expect((await retryReply).status()).toBe(200);
   await expect(agent.getByRole('alert')).not.toBeVisible();
   await expect(
     agent.getByRole('button', { name: 'Retry agent files', exact: true }),

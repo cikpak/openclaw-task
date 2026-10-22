@@ -37,7 +37,8 @@ export default tseslint.config(
     ignores: [
       '**/node_modules/**',
       '**/dist/**',
-      '.context/**',
+      '**/.cloudflare/**',
+      '**/.context/**',
       '.agents/**',
       '.claude/**',
       '.gstack/**',

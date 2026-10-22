@@ -1,3 +1,4 @@
+import { application } from './manager-client.js';
 import { mkdir } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import type { Attachment } from '@messenger/contracts';
@@ -19,14 +20,14 @@ test('sent uploads remain in their conversation files after completion and reloa
     /^messenger-acceptance-[a-z0-9-]+$/u,
   );
   await login(page);
-  const models = await page.request.get('/api/models');
+  const models = await application(page).get('/api/models?refresh=true');
   expect(models.ok()).toBe(true);
   expect(
     ((await models.json()) as { models: Array<{ id: string }> }).models.some(
       (model) => model.id === 'mock/test-model',
     ),
   ).toBe(true);
-  await cleanChats(page.request);
+  await cleanChats(page);
   await page.goto('/');
   await page.getByRole('button', { name: 'New conversation' }).click();
   const creation = page.getByRole('dialog', { name: 'Start a conversation' });
@@ -38,17 +39,11 @@ test('sent uploads remain in their conversation files after completion and reloa
   await creation
     .getByLabel('First message optional')
     .fill('DELAY_RESPONSE_FIXTURE Read the initial attachment');
-  const initialReply = page.waitForResponse(
-    (response) =>
-      new URL(response.url()).pathname === '/api/uploads' &&
-      response.request().method() === 'POST',
-  );
   await creation.locator('input[type="file"]').setInputFiles({
     name: 'initial-note.txt',
     mimeType: 'text/plain',
     buffer: Buffer.from('TEXT_FIXTURE_TOKEN'),
   });
-  const initial = (await (await initialReply).json()) as Attachment;
   await expect(
     creation.getByRole('button', { name: 'Remove initial-note.txt' }),
   ).toBeVisible();
@@ -92,17 +87,11 @@ test('sent uploads remain in their conversation files after completion and reloa
   await expect(shared.getByRole('link')).toHaveCount(0);
   await expect(agent.getByRole('link')).toHaveCount(0);
   await panel.getByRole('button', { name: 'Close conversation files' }).click();
-  const uploadReply = page.waitForResponse(
-    (response) =>
-      new URL(response.url()).pathname === '/api/uploads' &&
-      response.request().method() === 'POST',
-  );
   await page.locator('input[type="file"]').setInputFiles({
     name: 'follow-up.md',
     mimeType: 'text/markdown',
     buffer: Buffer.from('# Follow-up\nMARKDOWN_FIXTURE_TOKEN'),
   });
-  const followUp = (await (await uploadReply).json()) as Attachment;
   await expect(
     page.getByRole('button', { name: 'Remove follow-up.md' }),
   ).toBeVisible();
@@ -115,20 +104,20 @@ test('sent uploads remain in their conversation files after completion and reloa
     page.getByRole('button', { name: 'Remove follow-up.md' }),
   ).not.toBeVisible();
   async function retainedMetadata() {
-    const response = await page.request.get(
+    const response = await application(page).get(
       `/api/chats/${chatId}/shared-files`,
     );
     expect(response.status()).toBe(200);
     const { files } = (await response.json()) as { files: Attachment[] };
-    expect(files.length).toBeLessThanOrEqual(100);
     expect(files).toHaveLength(2);
-    for (const file of [initial, followUp])
-      expect(files).toContainEqual({
-        uploadId: file.uploadId,
-        name: file.name,
-        mimeType: file.mimeType,
-        size: file.size,
-      });
+    expect(files.map((file) => file.name).sort()).toEqual([
+      'follow-up.md',
+      'initial-note.txt',
+    ]);
+    for (const file of files) {
+      expect(file.uploadId).toMatch(/^[a-zA-Z0-9_-]+$/u);
+      expect(file.size).toBeGreaterThan(0);
+    }
   }
   await retainedMetadata();
   await trigger.click();
@@ -163,7 +152,7 @@ test('sent uploads remain in their conversation files after completion and reloa
   });
   await panel.getByRole('button', { name: 'Close conversation files' }).click();
   const otherId = await createChat(page, 'Separate files');
-  const otherFiles = await page.request.get(
+  const otherFiles = await application(page).get(
     `/api/chats/${otherId}/shared-files`,
   );
   expect(otherFiles.status()).toBe(200);

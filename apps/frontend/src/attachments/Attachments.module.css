@@ -114,7 +114,7 @@ a.item:hover {
   left: 47px;
   top: 0;
   bottom: 0;
-  width: min(272px, calc(100vw - 64px));
+  width: min(352px, calc(100vw - 64px));
   display: flex;
   flex-direction: column;
   background: var(--paper);
@@ -264,6 +264,65 @@ a.item:hover {
   display: block;
   color: var(--danger);
   font-size: 14px;
+}
+.fileCards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+.fileCardWrapper {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+.fileCard,
+.catalog .fileCard {
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 44px;
+  min-height: 60px;
+  margin: 0;
+  padding: 14px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--wash);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  text-decoration: none;
+}
+.fileCard:hover:enabled {
+  background: #ededed;
+}
+.fileCardName {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.fileCardSize {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.fileCardIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+}
+.fileCardIcon svg {
+  transform: scale(1.5);
 }
 @media (max-width: 700px) {
   .fileDownload {

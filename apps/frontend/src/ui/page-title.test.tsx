@@ -104,11 +104,11 @@ it('keeps startup, unavailable and signed-out titles accurate', () => {
   expect(document.title).toBe('Sign in — OpenClaw');
 });
 it.each([
-  ['open', 'ready', 'ready', 'Gateway connected'],
+  ['open', 'ready', 'ready', 'Connected'],
   ['open', 'connecting', 'connecting', 'Connecting…'],
-  ['open', 'unavailable', 'unavailable', 'Gateway unavailable'],
+  ['open', 'unavailable', 'unavailable', 'Connection unavailable'],
   ['connecting', 'ready', 'connecting', 'Connecting…'],
-  ['closed', 'ready', 'unavailable', 'Gateway unavailable'],
+  ['closed', 'ready', 'unavailable', 'Connection unavailable'],
 ] as const)(
   'derives %s transport / %s Gateway status without stale green',
   (transport, connection, effective, label) => {
@@ -134,15 +134,13 @@ it('changes from connected to unavailable immediately when transport closes', ()
       <App />
     </MemoryRouter>,
   );
-  expect(
-    screen.getByText('Gateway connected', { exact: true }),
-  ).toBeInTheDocument();
+  expect(screen.getByText('Connected', { exact: true })).toBeInTheDocument();
   act(() => useChatProjection.getState().markTransportClosed());
   expect(
-    screen.queryByText('Gateway connected', { exact: true }),
+    screen.queryByText('Connected', { exact: true }),
   ).not.toBeInTheDocument();
   expect(
-    screen.getByText('Gateway unavailable', { exact: true }),
+    screen.getByText('Connection unavailable', { exact: true }),
   ).toBeInTheDocument();
   act(() => useChatProjection.getState().beginConnection());
   expect(screen.getByText('Connecting…', { exact: true })).toBeInTheDocument();

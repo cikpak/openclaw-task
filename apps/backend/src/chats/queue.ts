@@ -4,7 +4,7 @@ import type {
   ConversationCommand,
   PendingMessage,
 } from '@messenger/contracts';
-import type { Store } from '../database.js';
+import type { Store } from '../storage/store.js';
 import type {
   GatewayAttachment,
   GatewayHistory,
@@ -16,6 +16,7 @@ import {
   NotFoundError,
   ValidationError,
 } from '../errors.js';
+import { confirmedCancellation } from './cancellations.js';
 
 export function requireVersion(
   actual: number,
@@ -121,16 +122,36 @@ export function reconcileInputs(
   store: Store,
   chatId: string,
   history: GatewayHistory,
+  locallyUninvoked?: (item: PendingMessage) => boolean,
+  acceptNativeCancellation = false,
 ): void {
   for (const item of store.pending(chatId)) {
     if (item.state === 'pending') continue;
     const receipt = history.receipts.find(
       (candidate) => candidate.runId === item.submissionId,
     );
-    if (receipt?.cancelled || receipt?.state === 'consumed') {
+    const sameScope =
+      Boolean(history.sessionId) &&
+      store.submissionScope(item.id) === history.sessionId;
+    const nativeCancelled =
+      confirmedCancellation(store, item, history) ||
+      (acceptNativeCancellation &&
+        sameScope &&
+        history.nativeCancelledInputs?.includes(item.submissionId) === true);
+    const journaled =
+      !receipt &&
+      sameScope &&
+      history.completedInputs?.includes(item.submissionId) === true &&
+      history.activeRun?.id !== item.submissionId;
+    if (
+      receipt?.cancelled ||
+      receipt?.state === 'consumed' ||
+      journaled ||
+      nativeCancelled
+    ) {
       store.removePending(
         item.id,
-        receipt.cancelled ? 'cancelled' : 'consumed',
+        receipt?.cancelled || nativeCancelled ? 'cancelled' : 'consumed',
       );
     } else if (
       receipt?.state === 'pending' ||
@@ -139,6 +160,7 @@ export function reconcileInputs(
       item.state = 'submitted';
       store.savePending(item);
     } else if (item.state === 'submitting' || item.state === 'submitted') {
+      if (item.state === 'submitting' && locallyUninvoked?.(item)) continue;
       item.state = 'unknown';
       store.savePending(item);
     }

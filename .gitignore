@@ -8,10 +8,14 @@ test-results/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
-/.context/
+**/.context/
 /.gstack/
 /.codex/
 /.agents/
 /.claude/
 /docs/plans/
 .DS_Store
+
+.cloudflare/
+.dev.vars
+.dev.vars.*

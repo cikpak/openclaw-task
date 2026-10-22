@@ -1,3 +1,4 @@
+import { recentViewport } from './recentViewport';
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useParams } from 'react-router';
 import { ArtifactCatalog } from '../attachments/Artifacts';
@@ -38,7 +39,8 @@ function ConversationView({ chatId }: { chatId: string }) {
     setRefreshing(true);
     try {
       await send({
-        type: 'conversation.snapshot.request',
+        type: 'conversation.recent.request',
+        viewport: recentViewport(history.current),
         commandId: commandId(),
         chatId,
       });
@@ -56,7 +58,8 @@ function ConversationView({ chatId }: { chatId: string }) {
     if (connection !== 'ready') return;
     let active = true;
     void send({
-      type: 'conversation.snapshot.request',
+      type: 'conversation.recent.request',
+      viewport: recentViewport(history.current),
       commandId: commandId(),
       chatId,
     }).catch((cause) => {
@@ -65,7 +68,7 @@ function ConversationView({ chatId }: { chatId: string }) {
     return () => {
       active = false;
     };
-  }, [chatId, send, connection]);
+  }, [chatId, send, connection, history]);
   const lastMessage = snapshot?.messages.at(-1)?.id;
   const unread = snapshot?.chat.unread ?? false;
   useEffect(() => {

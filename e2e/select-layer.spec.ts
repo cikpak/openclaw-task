@@ -1,6 +1,7 @@
+import { refreshAgentSettings } from './helpers.js';
 import { mkdir } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import type { ModelsResponse } from '@messenger/contracts';
+import { mockManager } from './manager-fixtures.js';
 import { cleanChats, createChat, login } from './helpers.js';
 
 test('select options escape clipped modal content, keep their border and remain interactive', async ({
@@ -10,28 +11,32 @@ test('select options escape clipped modal content, keep their border and remain 
     /^messenger-acceptance-[a-z0-9-]+$/u,
   );
   await login(page);
-  await cleanChats(page.request);
-  const id = await createChat(page, 'Select layers');
-  await page.route(`**/api/models?chatId=${id}`, async (route) => {
-    const response = await route.fetch();
-    const data = (await response.json()) as ModelsResponse;
-    for (const model of data.models) {
-      model.thinkingLevels = [
-        'off',
-        'minimal',
-        'low',
-        'medium',
-        'high',
-        'xhigh',
-        'ultra',
-      ].map((level) => ({ id: level, label: level }));
-    }
-    await route.fulfill({ response, json: data });
-  });
+  await cleanChats(page);
+  await createChat(page, 'Select layers');
+  await mockManager(
+    page,
+    () => Promise.resolve(undefined),
+    (result, command) => {
+      if (result.ok && command?.type === 'models.list')
+        for (const model of result.data.models ?? [])
+          model.thinkingLevels = [
+            'off',
+            'minimal',
+            'low',
+            'medium',
+            'high',
+            'xhigh',
+            'ultra',
+          ].map((level) => ({ id: level, label: level }));
+      return result;
+    },
+  );
+  await page.reload();
   await page
     .getByRole('button', { name: 'Agent settings', exact: true })
     .click();
   const dialog = page.getByRole('dialog', { name: 'Agent settings' });
+  await refreshAgentSettings(dialog);
   const trigger = dialog.getByRole('combobox', {
     name: 'Thinking',
     exact: true,

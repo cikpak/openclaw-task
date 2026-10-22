@@ -4,6 +4,7 @@ import { ErrorNotice } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import styles from './Attachments.module.css';
+import { AgentFileChat, AgentFileLink } from './AgentFileLink';
 import { useConversationFiles } from './useConversationFiles';
 
 export function ArtifactLinks({
@@ -14,17 +15,13 @@ export function ArtifactLinks({
   artifacts: Artifact[];
 }) {
   return (
-    <div className={styles.items}>
+    <div className={styles.fileCards}>
       {artifacts.map((artifact) => (
-        <a
-          className={styles.item}
-          key={artifact.id}
-          href={`/api/chats/${encodeURIComponent(chatId)}/artifacts/${encodeURIComponent(artifact.id)}`}
-          download={artifact.name}
-        >
-          <Icon name="download" /> {artifact.name}{' '}
-          <small>{Math.ceil(artifact.sizeBytes / 1024)} KB</small>
-        </a>
+        <AgentFileChat.Provider value={chatId} key={artifact.id}>
+          <AgentFileLink href={`file:${artifact.id}`} card={artifact}>
+            {artifact.name}
+          </AgentFileLink>
+        </AgentFileChat.Provider>
       ))}
     </div>
   );
@@ -115,12 +112,16 @@ function ArtifactPanel({ chatId }: { chatId: string }) {
           >
             <h3>Shared with agent</h3>
             {shared.files?.length ? (
-              <div className={styles.items}>
+              <div className={styles.fileCards}>
                 {shared.files.map((file) => (
-                  <span className={styles.item} key={file.uploadId}>
-                    <Icon name="file" /> {file.name}{' '}
-                    <small>{Math.ceil(file.size / 1024)} KB</small>
-                  </span>
+                  <AgentFileChat.Provider value={chatId} key={file.uploadId}>
+                    <AgentFileLink
+                      href={`file:${file.uploadId}`}
+                      card={{ name: file.name, sizeBytes: file.size }}
+                    >
+                      {file.name}
+                    </AgentFileLink>
+                  </AgentFileChat.Provider>
                 ))}
               </div>
             ) : shared.loaded && !shared.error ? (

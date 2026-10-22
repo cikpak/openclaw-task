@@ -146,12 +146,9 @@ it('keeps canonical output off the chat and preserves artifact downloads in deta
   ).toHaveAttribute('data-tool-status', 'recorded');
   await userEvent.click(screen.getByRole('button'));
   await waitFor(() => expect(screen.getByText('File contents.')).toBeVisible());
-  const download = screen.getByRole('link', { name: /report.txt/u });
-  expect(download).toHaveAttribute('download', 'report.txt');
-  expect(download).toHaveAttribute(
-    'href',
-    '/api/chats/chat-a/artifacts/artifact-a',
-  );
+  const download = screen.getByRole('button', { name: /report.txt/u });
+
+  expect(download).toBeEnabled();
   await userEvent.tab();
   expect(download).toHaveFocus();
   expect(screen.getByRole('dialog')).toBeVisible();
