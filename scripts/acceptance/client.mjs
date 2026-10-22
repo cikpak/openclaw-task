@@ -93,6 +93,13 @@ export class AcceptanceClient {
   }
   command(value, timeout = 180_000) {
     const commandId = value.commandId ?? randomUUID();
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN)
+      return Promise.reject(
+        Object.assign(new Error(`${value.type}: CONNECTION_CLOSED`), {
+          code: 'CONNECTION_CLOSED',
+          status: 503,
+        }),
+      );
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.replies.delete(commandId);
@@ -110,7 +117,19 @@ export class AcceptanceClient {
             }),
           );
       });
-      this.socket.send(JSON.stringify({ ...value, commandId }));
+      const failed = () =>
+        this.replies.get(commandId)?.({
+          ok: false,
+          commandId,
+          error: { code: 'CONNECTION_CLOSED', status: 503 },
+        });
+      try {
+        this.socket.send(JSON.stringify({ ...value, commandId }), (error) => {
+          if (error) failed();
+        });
+      } catch {
+        failed();
+      }
     });
   }
   async upload(bytes, mimeType, name) {
