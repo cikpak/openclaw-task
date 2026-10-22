@@ -29,9 +29,11 @@ it('preserves the same slot during downloads and keeps mobile touch targets', ()
     ),
     'utf8',
   );
-  expect(component).toMatch(
-    /className=\{busy \? styles.fileDownloadSpinner : undefined\}\s*aria-hidden="true"/,
+  expect(component).toContain(
+    'className={card ? styles.fileCard : styles.fileDownload}',
   );
+  expect(component).toContain("card ? styles.fileCardIcon : ''");
+  expect(component).toContain("busy ? styles.fileDownloadSpinner : ''");
   expect(component).toContain("name={busy ? 'spinner' : 'download'}");
   expect(css).toMatch(
     /@media \(max-width: 700px\)\s*\{\s*\.fileDownload\s*\{\s*min-height: 44px;/,
