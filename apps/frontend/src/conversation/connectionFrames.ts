@@ -1,10 +1,11 @@
+import { frameAssembly } from './frameAssembly';
 import { unstable_batchedUpdates } from 'react-dom';
 import type { ConversationEvent } from '@messenger/contracts';
-import { commandId } from '../lib/api';
+import { ApiError, commandId } from '../lib/api';
 import { frameValid } from '../lib/validation';
 import { useChatProjection, useNotices } from '../state/stores';
 import type { ConnectionState, Send } from './connectionCommands';
-const MAX_FRAME_CHARACTERS = 32 * 1024 * 1024;
+const MAX_FRAME_CHARACTERS = 64 * 1024;
 
 export function connectionFrames(
   state: ConnectionState,
@@ -13,6 +14,7 @@ export function connectionFrames(
   current: () => boolean,
 ) {
   const { pending, completed } = state;
+  const assemble = frameAssembly();
   let textTimer: number | undefined;
   let textEvents: ConversationEvent[] = [];
   let textBytes = 0;
@@ -39,7 +41,7 @@ export function connectionFrames(
       return;
     let value: unknown;
     try {
-      value = JSON.parse(event.data);
+      value = assemble(JSON.parse(event.data));
     } catch {
       return;
     }
@@ -69,7 +71,9 @@ export function connectionFrames(
     if (completed.current.size > 500)
       completed.current.delete(completed.current.values().next().value ?? '');
     if (!value.ok) {
-      item.reject(new Error(value.error.detail));
+      item.reject(
+        new ApiError(value.error.detail, value.error.status, value.error.code),
+      );
       return;
     }
     // A streaming event in another chat cannot invalidate this chat's snapshot.

@@ -10,7 +10,8 @@ export function checkpoint(action, stage, input, signal) {
       action,
       stage,
     ];
-    if (action === 'capture') args.push(input);
+    if (action === 'capture')
+      args.push(typeof input === 'string' ? input : input.checkpointId);
     const child = spawn('python3', args, {
       detached: true,
       stdio: ['pipe', 'pipe', 'ignore'],
@@ -58,6 +59,11 @@ export function checkpoint(action, stage, input, signal) {
       }
     });
     child.stdin.on('error', () => {});
-    child.stdin.end(action === 'restore' ? JSON.stringify(input) : '');
+    child.stdin.end(
+      action === 'restore' ||
+        (action === 'capture' && typeof input === 'object')
+        ? JSON.stringify(input)
+        : '',
+    );
   });
 }

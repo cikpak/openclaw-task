@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, readdir, chown } from 'node:fs/promises';
+import { mkdir, readdir, chown, chmod } from 'node:fs/promises';
 import { root, runtime, environment } from './environment.mjs';
 import { audit, initialize } from './configuration.mjs';
 import { createSupervisor } from './processes.mjs';
@@ -7,10 +7,13 @@ import { pair } from './pairing.mjs';
 import { fullMessage } from './full-message.mjs';
 import { createJobs } from './jobs.mjs';
 import { createRecovery } from './recovery.mjs';
+import { filesBusy } from './files.mjs';
 import { serve } from './http.mjs';
 environment();
 await mkdir(root, { recursive: true });
 await mkdir(runtime, { recursive: true, mode: 0o700 });
+await chmod(runtime, 0o700);
+await chown(runtime, 0, 0);
 const bootId = process.env.BOOT_ID ?? randomUUID();
 const restoreExpected = process.env.RESTORE_EXPECTED === '1',
   initialRootEmpty = (await readdir(root)).length === 0;
@@ -58,6 +61,7 @@ const actions = {
     return recovery.inspect(signal);
   },
   capture: async (data, signal) => {
+    if (filesBusy()) throw new Error('File handoff still active');
     await supervisor.stopped();
     await ready();
     const result = await recovery.capture(data, signal);
@@ -87,6 +91,7 @@ const actions = {
 const jobs = createJobs(bootId, actions);
 const server = await serve(bootId, jobs, () => ({
   helperReady: true,
+  filesBusy: filesBusy(),
   gatewayState: supervisor.status(),
   bootId,
   restoreExpected,

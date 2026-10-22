@@ -148,6 +148,30 @@ try {
   assert.equal(captured.status, 'succeeded');
   assert.equal(captured.result.counts.userFiles, 65);
   assert.equal(captured.result.counts.databases, 1);
+  assert.ok(
+    captured.result.files.every(
+      (file) => file.key === `files/test-generation/${file.sha256}`,
+    ),
+  );
+  const reused = await job('capture', {
+    checkpointId: 'reuse-generation',
+    previousFiles: captured.result.files,
+  });
+  assert.equal(reused.status, 'succeeded');
+  assert.deepEqual(
+    reused.result.files.map((file) => file.key),
+    captured.result.files.map((file) => file.key),
+  );
+  const fresh = await job('capture', {
+    checkpointId: 'fresh-generation',
+    previousFiles: [],
+  });
+  assert.equal(fresh.status, 'succeeded');
+  assert.ok(
+    fresh.result.files.every(
+      (file) => file.key === `files/fresh-generation/${file.sha256}`,
+    ),
+  );
   const duplicate = await request('/jobs', {
     operationId: captured.operationId,
     bootId: 'test-boot',

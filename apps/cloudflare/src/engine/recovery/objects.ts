@@ -29,7 +29,7 @@ export class RecoveryObjects {
       throw new Error('Recovery reference mismatch');
     for (const object of recoveryObjects(result)) {
       if (
-        !/^(?:recovery\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_./-]+|files\/[a-f0-9]{64})$/.test(
+        !/^(?:recovery\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_./-]+|files\/(?:[a-zA-Z0-9_-]+\/)?[a-f0-9]{64})$/.test(
           object.key,
         ) ||
         object.key.split('/').includes('..') ||

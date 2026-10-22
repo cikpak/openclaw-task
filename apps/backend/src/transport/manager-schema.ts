@@ -51,6 +51,7 @@ export const applicationCommandSchema = z.discriminatedUnion('type', [
   z.object({
     ...base,
     type: z.literal('models.list'),
+    cachedOnly: z.boolean().optional(),
     chatId: z.uuid().optional(),
   }),
   z.object({

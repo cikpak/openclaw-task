@@ -1,6 +1,8 @@
 import type { ChatService } from '../../../backend/src/chats/service.js';
 import type { Store } from '../../../backend/src/storage/store.js';
 import type { Gateway } from '../../../backend/src/gateway/types.js';
+import { ApplicationError } from '../../../backend/src/errors.js';
+import { changed } from '../../../backend/src/chats/service-runtime.js';
 
 /** A durable create intent is materialized with the same deterministic native ID. */
 export async function materializeChats(
@@ -30,7 +32,19 @@ export async function materializeChats(
       // agents.list reads native committed configuration. Recover before every
       // retry, including a lost create ACK or manager restart. Native create uses
       // the deterministic messenger-<chatId> identity and refuses duplicates.
-      let found = await gateway.recoverCreation?.(chat.id, chat.settings);
+      let found;
+      try {
+        await service.validateSettings(chat.settings);
+        found = await gateway.recoverCreation?.(chat.id, chat.settings);
+      } catch (error) {
+        if (error instanceof ApplicationError && error.status < 500) {
+          chat.status = 'recovery';
+          chat.version += 1;
+          store.saveChat(chat);
+          changed(service, chat.id);
+        }
+        return;
+      }
       const recovered = store.getChat(chat.id);
       if (
         recovered.status !== 'creating' ||
@@ -47,7 +61,13 @@ export async function materializeChats(
           .run(chat.id, crypto.randomUUID(), 'creating');
         try {
           found = await gateway.create(chat.id, chat.settings);
-        } catch {
+        } catch (error) {
+          if (error instanceof ApplicationError && error.status < 500) {
+            chat.status = 'recovery';
+            chat.version += 1;
+            store.saveChat(chat);
+            changed(service, chat.id);
+          }
           store.db
             .prepare(
               'UPDATE native_creation_intents SET state = ? WHERE chat_id = ?',

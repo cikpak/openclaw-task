@@ -70,6 +70,7 @@ export async function sleepStep(core: DurableLifecycle): Promise<void> {
     // Synchronous check, persisted fence, and destroy invocation are serialized.
     // Once fenced, even an uncertain destroy must finish before any restore.
     if (state.wantWake || driver.pending()) return core.cancel();
+    if (driver.canStop?.() === false) return core.schedule(core.now() + 1000);
     core.move('stop-issued');
     await driver.destroy();
     await stopped(core);

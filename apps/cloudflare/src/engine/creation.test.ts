@@ -12,6 +12,9 @@ import { materializeChats } from './creation.js';
 import { EngineDriver } from './driver.js';
 import type { EngineContext } from '../manager/types.js';
 import type { RecoveryCheckpoint } from './lifecycle/types.js';
+import type { RecoveryDescriptor } from './recovery/types.js';
+import type { PrivateContainer } from './container.js';
+import type { NativeGateway } from './gateway/native.js';
 
 const cleanup: (() => void)[] = [];
 afterEach(() => cleanup.splice(0).forEach((close) => close()));
@@ -183,33 +186,51 @@ it('does not initialize while Gateway is gated and never rematerializes existing
 
 it('idempotent recovery-reference commit retains the previous valid generation', () => {
   const f = setup();
-  f.store.db.exec(
-    'CREATE TABLE recovery_references (id INTEGER PRIMARY KEY, current TEXT NOT NULL, previous TEXT)',
+  const checkpoint = (
+    generation: string,
+    digest: string,
+  ): RecoveryCheckpoint => {
+    const object = { size: 1, sha256: digest, md5: 'AAAAAAAAAAAAAAAAAAAAAA==' };
+    const descriptor: RecoveryDescriptor = {
+      version: 1,
+      checkpointId: generation,
+      inventoryDigest: digest,
+      archive: { ...object, key: `recovery/${generation}/state.tar.gz` },
+      manifest: { ...object, key: `recovery/${generation}/manifest.json` },
+      files: [
+        {
+          ...object,
+          key: `files/${generation}/${digest}`,
+          path: 'agents/work/documents/reply.txt',
+          mode: 0o600,
+          uid: 1000,
+          gid: 1000,
+        },
+      ],
+      counts: { entries: 1, userFiles: 1, databases: 0 },
+    };
+    return {
+      generation,
+      manifestKey: descriptor.manifest.key,
+      manifestSha256: digest,
+      descriptor: { ...descriptor },
+    };
+  };
+  const first = checkpoint('first', 'a'.repeat(64));
+  const second = checkpoint('second', 'b'.repeat(64));
+  const driver = new EngineDriver(
+    { store: f.store, env: {} } as unknown as EngineContext,
+    {} as PrivateContainer,
+    {} as NativeGateway,
+    f.service,
   );
-  const first: RecoveryCheckpoint = {
-    generation: 'first',
-    manifestKey: 'recovery/first/manifest.json',
-    manifestSha256: 'a'.repeat(64),
-  };
-  const second: RecoveryCheckpoint = {
-    generation: 'second',
-    manifestKey: 'recovery/second/manifest.json',
-    manifestSha256: 'b'.repeat(64),
-  };
-  const receiver = { context: { store: f.store } as unknown as EngineContext };
-  const commit = (checkpoint: RecoveryCheckpoint) =>
-    Reflect.apply(
-      (...args: [RecoveryCheckpoint]) =>
-        EngineDriver.prototype.commit.call(
-          receiver as unknown as EngineDriver,
-          ...args,
-        ),
-      undefined,
-      [checkpoint],
-    );
+  const onCommit = vi.fn();
+  driver.onCommit = onCommit;
+  const commit = (value: RecoveryCheckpoint) => driver.commit(value);
   commit(first);
   commit(second);
   commit(second);
+  expect(onCommit).toHaveBeenLastCalledWith(second.descriptor);
   expect(
     f.store.db
       .prepare('SELECT current, previous FROM recovery_references WHERE id = 1')

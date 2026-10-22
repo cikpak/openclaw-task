@@ -43,6 +43,7 @@ export interface LifecycleDriver {
   verifyCheckpoint(checkpoint: RecoveryCheckpoint): Promise<void>;
   /** Synchronous SQL writes join the same transaction as recovery-reference commit. */
   commit(checkpoint: RecoveryCheckpoint): void;
+  canStop?(): boolean;
   destroy(): Promise<void>;
   onReady?(): Promise<void>;
 }

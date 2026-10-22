@@ -1,8 +1,13 @@
-import base64, json, pathlib, shutil, tarfile
+import base64, json, pathlib, shutil, tarfile, re
 from snapshot_common import ROOT, inventory, inventory_digest, digest, user_roots, is_user, root_metadata
 from snapshot_sqlite import database_checks
 
-def capture(stage, checkpoint):
+def capture(stage, checkpoint, previous_files=None):
+    previous = {}
+    for item in previous_files or []:
+        key, sha = item.get("key", ""), item.get("sha256", "")
+        if not re.fullmatch(r"[a-f0-9]{64}", sha) or not re.fullmatch(r"files/(?:[A-Za-z0-9_-]{1,80}/)?" + sha, key): raise ValueError("Invalid previous file key")
+        previous.setdefault(sha, key)
     if not checkpoint or len(checkpoint) > 80 or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-' for c in checkpoint): raise ValueError('Invalid checkpoint')
     before = inventory()
     total = sum(entry.get('size', 0) for entry in before)
@@ -16,7 +21,7 @@ def capture(stage, checkpoint):
         if entry['kind'] == 'file' and is_user(entry['path'], roots):
             name = 'user-' + entry['sha256']
             if not (stage / name).exists(): shutil.copyfile(ROOT / entry['path'], stage / name)
-            objects.append(dict(key='files/' + entry['sha256'], local=name, **{key:entry[key] for key in ('path', 'size', 'sha256', 'mode', 'uid', 'gid')}))
+            objects.append(dict(key=previous.get(entry['sha256'], 'files/' + checkpoint + '/' + entry['sha256']), local=name, **{key:entry[key] for key in ('path', 'size', 'sha256', 'mode', 'uid', 'gid')}))
     separated = {entry['path'] for entry in objects}
     with tarfile.open(stage / 'internal.tar.gz', 'w:gz', dereference=False) as archive:
         for entry in before:

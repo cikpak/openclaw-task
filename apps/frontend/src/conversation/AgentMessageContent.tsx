@@ -10,7 +10,11 @@ import {
 
 const plugins = [remarkGfm];
 const safeUrl = (url: string) =>
-  url.startsWith('sandbox:') ? url : defaultUrlTransform(url);
+  isAgentFileReference(url)
+    ? url
+    : /^(?:https?:|mailto:)/iu.test(url)
+      ? defaultUrlTransform(url)
+      : '';
 const components: Components = {
   a({ href, children, title }) {
     if (href && isAgentFileReference(href))

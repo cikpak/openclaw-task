@@ -8,8 +8,7 @@ import {
 import type { GatewayTransport } from '../../../../backend/src/gateway/context.js';
 import type { GatewayEvent } from '../../../../backend/src/gateway/types.js';
 import { GatewayUnavailableError } from '../../../../backend/src/errors.js';
-import { chatEventSchema } from '../../../../backend/src/gateway/protocol-schemas.js';
-import { messageText } from '../../../../backend/src/gateway/messages.js';
+import { nativeChatEvent } from './chat-event.js';
 import {
   managerIdentity,
   scopes,
@@ -22,6 +21,9 @@ export interface NativeTransportOptions {
   storage: AuthStorage;
   gatewayToken: string;
   pair(identity: ExpectedIdentity): Promise<void>;
+  observe?:
+    | ((frame: { event: string; payload?: unknown }) => Promise<void>)
+    | undefined;
 }
 const clientInfo = {
   id: 'gateway-client' as const,
@@ -38,6 +40,7 @@ export class NativeGatewayTransport implements GatewayTransport {
   private identityPromise: Promise<GatewayBrowserDeviceIdentity> | undefined;
   private generation = 0;
   private deviceToken = '';
+  private eventTail = Promise.resolve();
   secrets(): string[] {
     return [this.options.gatewayToken, this.deviceToken].filter(Boolean);
   }
@@ -143,22 +146,24 @@ export class NativeGatewayTransport implements GatewayTransport {
         this.connection(true);
       },
       onEvent: (frame) => {
-        if (!current() || frame.event !== 'chat') return;
-        const parsed = chatEventSchema.safeParse(frame.payload);
-        if (!parsed.success) return;
-        const e = parsed.data;
-        this.events({
-          type: 'chat',
-          sessionKey: e.sessionKey,
-          runId: e.runId,
-          sequence: e.seq,
-          state: e.state,
-          text:
-            e.state === 'error'
-              ? 'The request failed. Try again.'
-              : (e.deltaText ?? messageText(e.message)),
-          replace: e.replace ?? e.deltaText === undefined,
-        });
+        if (!current()) return;
+        if (!this.options.observe) {
+          this.chatFrame(frame);
+          return;
+        }
+        this.eventTail = this.eventTail
+          .then(async () => {
+            if (!current()) return;
+            try {
+              await this.options.observe?.(frame);
+            } catch {
+              /* No raw errors cross projection. */
+            }
+            if (current()) this.chatFrame(frame);
+          })
+          .catch(() => {
+            /* Keep subsequent frames fail-closed without exposing raw errors. */
+          });
       },
       onConnectFailure: async (error) => {
         if (!current())
@@ -197,6 +202,10 @@ export class NativeGatewayTransport implements GatewayTransport {
     });
     this.sdk = sdk;
     sdk.start();
+  }
+  private chatFrame(frame: { event: string; payload?: unknown }): void {
+    const event = nativeChatEvent(frame);
+    if (event) this.events(event);
   }
   stop(): Promise<void> {
     this.stopped = true;

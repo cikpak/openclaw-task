@@ -8,6 +8,7 @@ import type {
 import { AttachmentPicker } from '../attachments/AttachmentPicker';
 import { commandId, errorMessage, request } from '../lib/api';
 import { chatValid } from '../lib/validation';
+import { chatSettingsSupported } from '../lib/agent-behavior';
 import { ModelControls, selectModel } from '../settings/ModelControls';
 import {
   useChatProjection,
@@ -65,7 +66,7 @@ export function NewChat({ onClose }: { onClose: () => void }) {
     };
   }, []);
   async function createChat(close: () => void) {
-    if (busy) return;
+    if (busy || !chatSettingsSupported(settings, models)) return;
     setBusy(true);
     setError('');
     try {
@@ -104,7 +105,7 @@ export function NewChat({ onClose }: { onClose: () => void }) {
     setLoading(true);
     setError('');
     try {
-      setModels(await useModelCatalog.getState().load());
+      setModels(await useModelCatalog.getState().load(undefined, true));
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -168,7 +169,7 @@ export function NewChat({ onClose }: { onClose: () => void }) {
             </div>
           )}
           <ErrorNotice message={error} />
-          {error || refreshing ? (
+          {step === 1 || error || refreshing ? (
             <Button
               busy={refreshing}
               icon="refresh"
@@ -200,8 +201,7 @@ export function NewChat({ onClose }: { onClose: () => void }) {
                 loading ||
                 uploading ||
                 busy ||
-                !settings.model ||
-                models.every((m) => !m.available)
+                !chatSettingsSupported(settings, models)
               }
               onClick={() => {
                 if (step === 1) setStep(2);

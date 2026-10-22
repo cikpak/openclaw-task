@@ -6,7 +6,7 @@ import {
   useRef,
 } from 'react';
 import type { ReactNode } from 'react';
-import type { ConversationCommand } from '@messenger/contracts';
+import type { ManagerCommand } from '@messenger/contracts';
 import { useAuth } from '../auth/AuthProvider';
 import { useChatProjection } from '../state/stores';
 import type { Pending, Send } from './connectionCommands';
@@ -19,7 +19,7 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
   const completed = useRef(new Set<string>());
   const snapshotOrder = useRef(0);
   const send: Send = useCallback(
-    (command: ConversationCommand) =>
+    (command: ManagerCommand) =>
       new Promise((resolve, reject) => {
         if (
           !socket.current ||
@@ -33,14 +33,23 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
           );
           return;
         }
-        const timer = window.setTimeout(() => {
-          pending.current.delete(command.commandId);
-          reject(
-            new Error(
-              'Delivery is unconfirmed. Your draft has been kept. Check the conversation before sending it again.',
-            ),
-          );
-        }, 15000);
+        const timer = window.setTimeout(
+          () => {
+            pending.current.delete(command.commandId);
+            reject(
+              new Error(
+                command.type === 'conversation.message.send' ||
+                  command.type === 'chat.create'
+                  ? 'Delivery is unconfirmed. Your draft has been kept. Check the conversation before sending it again.'
+                  : 'This operation is taking longer than expected. Refresh before trying it again.',
+              ),
+            );
+          },
+          command.type === 'conversation.message.send' ||
+            command.type === 'chat.create'
+            ? 15000
+            : 720000,
+        );
         pending.current.set(command.commandId, {
           resolve,
           reject,
@@ -49,7 +58,8 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
           chatId: 'chatId' in command ? command.chatId : undefined,
           type: command.type,
           snapshotOrder:
-            command.type === 'conversation.snapshot.request'
+            command.type === 'conversation.snapshot.request' ||
+            command.type === 'conversation.recent.request'
               ? ++snapshotOrder.current
               : 0,
           connectionEpoch: useChatProjection.getState().connectionEpoch,
@@ -58,15 +68,14 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
       }),
     [],
   );
-  useEffect(
-    () =>
-      startConnection(
-        { socket, pending, completed, snapshotOrder },
-        send,
-        refresh,
-      ),
-    [refresh, send],
-  );
+  useEffect(() => {
+    const stop = startConnection(
+      { socket, pending, completed, snapshotOrder },
+      send,
+      refresh,
+    );
+    return stop;
+  }, [refresh, send]);
   return <ConnectionContext value={send}>{children}</ConnectionContext>;
 }
 export function useConversation() {

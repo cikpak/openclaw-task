@@ -1,9 +1,13 @@
+import { NativeAttachments } from '../files/attachments.js';
 import { GatewayFacade } from '../../../../backend/src/gateway/facade.js';
 import type {
   GatewayContext,
   GatewayFiles,
 } from '../../../../backend/src/gateway/context.js';
-import type { GatewayMapping } from '../../../../backend/src/gateway/types.js';
+import type {
+  GatewayAttachment,
+  GatewayMapping,
+} from '../../../../backend/src/gateway/types.js';
 import type { ProjectionPolicy } from '../../../../backend/src/presentation/safe.js';
 import { NotFoundError } from '../../../../backend/src/errors.js';
 import {
@@ -28,6 +32,7 @@ const noFiles: GatewayFiles = {
 /** Official SDK browser entry is used server-side over the private container Fetcher. */
 export class NativeGateway extends GatewayFacade {
   private readonly native: NativeGatewayTransport;
+  private readonly attachments: NativeAttachments;
   private readonly safe: SafeGatewayProjection;
   constructor(options: NativeGatewayOptions) {
     const safe = new SafeGatewayProjection(() => {
@@ -52,6 +57,7 @@ export class NativeGateway extends GatewayFacade {
     });
     super(transport, options.files ?? noFiles, options.fullMessage);
     this.native = transport;
+    this.attachments = new NativeAttachments(options.storage);
     this.safe = safe;
     this.optionsFiles = options.files;
   }
@@ -70,6 +76,9 @@ export class NativeGateway extends GatewayFacade {
     this.dispatch(false);
     return super.stop();
   }
+  secrets(): string[] {
+    return this.native.secrets();
+  }
   identity() {
     return this.native.identity();
   }
@@ -80,7 +89,33 @@ export class NativeGateway extends GatewayFacade {
     mapping: GatewayMapping,
     options: { cursor?: string; inputRunIds?: string[] } = {},
   ) {
-    return this.safe.history(await super.history(mapping, options));
+    return this.safe.history(
+      await this.attachments.history(
+        mapping,
+        await super.history(mapping, options),
+      ),
+    );
+  }
+  override async send(
+    mapping: GatewayMapping,
+    id: string,
+    text: string,
+    behavior: 'queue' | 'steer',
+    attachments: GatewayAttachment[] = [],
+  ) {
+    const prepared = await this.attachments.prepare(
+      mapping,
+      id,
+      text,
+      attachments,
+    );
+    return super.send(
+      mapping,
+      id,
+      prepared.text,
+      behavior,
+      prepared.attachments,
+    );
   }
   // Browser file transfer is provided only by the authenticated helper publication layer.
   override async artifacts(mapping: GatewayMapping) {

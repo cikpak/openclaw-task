@@ -90,7 +90,7 @@ export function SettingsPage() {
     setError('');
     try {
       const [catalog, loaded] = await Promise.all([
-        useModelCatalog.getState().load(),
+        useModelCatalog.getState().load(undefined, true),
         usePreferences.getState().load(),
       ]);
       setModels(catalog);

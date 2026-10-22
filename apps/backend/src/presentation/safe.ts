@@ -151,10 +151,13 @@ export class SafeTextStream {
   private suppressed = false;
   private readonly redactor: SecretRedactor;
   constructor(
-    private readonly projection: BrowserProjection,
+    private projection: BrowserProjection,
     private readonly tokenLimit = 4096,
   ) {
     this.redactor = projection.redactor();
+  }
+  refresh(projection: BrowserProjection): void {
+    this.projection = projection;
   }
   push(chunk: string): string {
     return this.scan(this.redactor.push(chunk));

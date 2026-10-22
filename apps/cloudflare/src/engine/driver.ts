@@ -7,6 +7,8 @@ import type { LifecycleDriver, RecoveryCheckpoint } from './lifecycle/types.js';
 import { RecoveryJobs } from './recovery/jobs.js';
 import { materializeChats } from './creation.js';
 import { RecoveryObjects } from './recovery/objects.js';
+import { recoveryObjects, type RecoveryDescriptor } from './recovery/types.js';
+import { assertFileIncarnations } from './recovery/incarnations.js';
 
 export class EngineDriver implements LifecycleDriver {
   readonly objects: RecoveryObjects;
@@ -101,6 +103,7 @@ export class EngineDriver implements LifecycleDriver {
   async stopWriters(): Promise<void> {
     await this.service.drain();
     await this.control.action('stop');
+    await this.beforeCapture();
   }
   async connect(): Promise<boolean> {
     const health = await this.control.health();
@@ -142,7 +145,9 @@ export class EngineDriver implements LifecycleDriver {
   disconnect(): void {
     void this.gateway.stop();
   }
+  additionalWork: () => boolean = () => false;
   pending(): boolean {
+    if (this.additionalWork()) return true;
     return this.context.store
       .listChats()
       .some(
@@ -152,9 +157,16 @@ export class EngineDriver implements LifecycleDriver {
           this.context.store.settingsOperation(chat.id) !== null,
       );
   }
+  beforeCapture: () => Promise<void> = () => Promise.resolve();
+  activeReaders: () => boolean = () => false;
+  canStop(): boolean {
+    return !this.activeReaders();
+  }
+  onCommit: (descriptor: RecoveryDescriptor) => void = () => {};
   busy(): Promise<boolean> {
     return Promise.resolve(
-      this.pending() ||
+      this.activeReaders() ||
+        this.pending() ||
         this.service.driving.size > 0 ||
         this.service.steering.size > 0 ||
         this.service.streams.size > 0 ||
@@ -177,6 +189,27 @@ export class EngineDriver implements LifecycleDriver {
     }
   }
   commit(checkpoint: RecoveryCheckpoint): void {
+    const descriptor = this.objects.descriptor(checkpoint);
+    const row = this.context.store.db
+      .prepare('SELECT current FROM recovery_references WHERE id = 1')
+      .get() as { current: string } | undefined;
+    const previous = row
+      ? this.objects.descriptor(JSON.parse(row.current) as RecoveryCheckpoint)
+      : undefined;
+    assertFileIncarnations(descriptor, previous);
+    const hasDeletionTable = this.context.store.db
+      .prepare("SELECT name FROM sqlite_master WHERE name = 'file_deletions'")
+      .get();
+    if (
+      hasDeletionTable &&
+      recoveryObjects(descriptor).some((object) =>
+        this.context.store.db
+          .prepare('SELECT object_key FROM file_deletions WHERE object_key = ?')
+          .get(object.key),
+      )
+    )
+      throw new Error('Recovery object deletion has not settled');
+    this.onCommit(descriptor);
     this.context.store.db
       .prepare(
         'INSERT INTO recovery_references VALUES (1, ?, NULL) ON CONFLICT(id) DO UPDATE SET previous = current, current = excluded.current WHERE current != excluded.current',

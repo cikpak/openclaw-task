@@ -8,6 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { setTimeout as delay } from 'node:timers/promises';
 import { build } from 'esbuild';
+import { verifyNativePagination } from './native-history-pagination.mjs';
 const exec = promisify(execCallback);
 const app = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const requireBackend = createRequire(resolve(app, '../backend/package.json'));
@@ -178,13 +179,11 @@ try {
     idempotencyKey: randomUUID(),
     permissionMode: 'workspace',
   });
+  const pagination = await verifyNativePagination(gateway, mapping);
   const longReply = 'A complete long reply. '.repeat(110000);
   await gateway.request('chat.inject', { ...mapping, message: longReply });
   const history = await gateway.history(mapping);
-  assert.equal(
-    history.messages.find((message) => message.role === 'assistant')?.text,
-    longReply,
-  );
+  assert.equal(history.messages.at(-1)?.text, longReply);
   await gateway.stop();
   // Existing local engine and durable DO identity/token survive an adapter restart.
   recreated = new NativeGateway({
@@ -267,6 +266,7 @@ try {
   console.log(
     JSON.stringify({
       ...recovery,
+      ...pagination,
       nativeSdkAuthentication: true,
       nativeStopRestartPreservesState: true,
       exactIdentityPairing: true,

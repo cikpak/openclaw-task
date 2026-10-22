@@ -12,6 +12,7 @@ interface CompositeJob {
   job: LifecycleJob;
   stage: 'primary' | 'upload' | 'complete';
   cancelled?: boolean;
+  settled?: boolean;
   descriptor?: RecoveryDescriptor;
   primary?: { action: string; data?: unknown };
   upload?: { checkpointId: string; grants: TransferGrant[]; reuse: string[] };
@@ -32,7 +33,7 @@ export class RecoveryJobs {
       this.key(job.id),
     );
     if (previous) {
-      if (previous.cancelled) return;
+      if (previous.cancelled || previous.settled) return;
       if (JSON.stringify(previous.job) !== JSON.stringify(job))
         throw new Error('Helper operation identity reused');
       await this.sendPrimary(previous);
@@ -74,8 +75,19 @@ export class RecoveryJobs {
         descriptor,
         grants: await this.objects.grants(descriptor, 'GET'),
       };
-    } else if (job.kind === 'capture') data = { checkpointId: job.id };
-    else if (job.kind === 'resume') action = 'start';
+    } else if (job.kind === 'capture') {
+      const row = this.context.store.db
+        .prepare('SELECT current FROM recovery_references WHERE id = 1')
+        .get() as { current: string } | undefined;
+      data = {
+        checkpointId: job.id,
+        previousFiles: row
+          ? this.objects.descriptor(
+              JSON.parse(row.current) as RecoveryCheckpoint,
+            ).files
+          : [],
+      };
+    } else if (job.kind === 'resume') action = 'start';
     record.primary = { action, ...(data === undefined ? {} : { data }) };
     await this.context.state.storage.put(this.key(job.id), record);
     await this.container.startJob(job.id, job.bootId, action, data);
@@ -86,10 +98,22 @@ export class RecoveryJobs {
     );
     if (!record) throw new Error('Private operation record unavailable');
     const { job } = record;
+    if (record.settled)
+      return {
+        ...job,
+        state: record.cancelled ? 'cancelled' : 'complete',
+        ...(record.descriptor
+          ? { checkpoint: this.checkpoint(record.descriptor) }
+          : {}),
+      };
     if (record.cancelled) {
       const result = await this.container.job(
         record.stage === 'upload' ? `${id}-upload` : id,
       );
+      if (result.status !== 'running') {
+        record.settled = true;
+        await this.context.state.storage.put(this.key(id), record);
+      }
       return {
         ...job,
         state: result.status === 'running' ? 'running' : 'cancelled',
@@ -124,7 +148,11 @@ export class RecoveryJobs {
             ? 'cancelled'
             : 'failed',
       );
-    if (job.kind !== 'capture') return status('complete');
+    if (job.kind !== 'capture') {
+      record.settled = true;
+      await this.context.state.storage.put(this.key(id), record);
+      return status('complete');
+    }
     if (record.stage === 'primary') {
       record.descriptor = result.result as RecoveryDescriptor;
       const descriptor = record.descriptor;
@@ -150,6 +178,9 @@ export class RecoveryJobs {
       return status('running');
     }
     if (!record.descriptor) throw new Error('Recovery descriptor unavailable');
+    record.settled = true;
+    record.stage = 'complete';
+    await this.context.state.storage.put(this.key(id), record);
     return status('complete', this.checkpoint(record.descriptor));
   }
   private checkpoint(descriptor: RecoveryDescriptor): RecoveryCheckpoint {

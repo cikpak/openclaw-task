@@ -60,7 +60,14 @@ export async function completeMessages(
         message.data.messageId) !== id
     )
       throw new GatewayUnavailableError();
-    result.push(message.data);
+    result.push({
+      ...message.data,
+      __openclaw: {
+        ...message.data.__openclaw,
+        ...parsed.data.__openclaw,
+        truncated: false,
+      },
+    });
   }
   return result;
 }

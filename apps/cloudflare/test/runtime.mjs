@@ -25,6 +25,7 @@ export async function runtime({
   backendUnavailable = false,
   probe = false,
   storageRoot,
+  r2 = false,
 } = {}) {
   const common = {
     modules: true,
@@ -74,6 +75,9 @@ export async function runtime({
           durableObjects: {
             MANAGERS: { className: 'ConversationManager', useSQLite: true },
           },
+          ...(r2
+            ? { r2Buckets: { RECOVERY_BUCKET: 'manager-test-uploads' } }
+            : {}),
           bindings: { APP_ORIGIN: origin, MANAGER_ID: 'primary' },
         },
         {
@@ -153,7 +157,18 @@ async function managerProbe() {
     stdin: {
       contents: `
     import worker, {ConversationManager as Actual} from './src/manager/worker.ts';
+    import {managerCommandSchema} from '../backend/src/transport/manager-schema.ts';
     export class ConversationManager extends Actual {
+      testCommandLedger() {
+        return this.ctx.storage.sql.exec('SELECT id,json FROM manager_command_inputs ORDER BY id').toArray();
+      }
+      testLegacyCommand(command) {
+        this.ctx.storage.sql.exec('UPDATE manager_command_inputs SET json=? WHERE id=?',JSON.stringify(managerCommandSchema.parse(command)),command.commandId);
+      }
+      testCommandOwner(commandId,accountId) {
+        if(accountId!==undefined)this.ctx.storage.sql.exec("UPDATE manager_resources SET account_id=? WHERE kind='command' AND id=?",accountId,commandId);
+        return this.ctx.storage.sql.exec("SELECT account_id FROM manager_resources WHERE kind='command' AND id=?",commandId).toArray()[0].account_id;
+      }
       async testRenew() {
         for(const socket of this.ctx.getWebSockets()){const value=socket.deserializeAttachment();value.renewAt=0;socket.serializeAttachment(value);}
         await super.alarm();

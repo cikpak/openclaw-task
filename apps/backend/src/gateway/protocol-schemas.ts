@@ -98,6 +98,7 @@ export const historySchema = z
     deltaCursor: z.string().optional(),
     hasMore: z.boolean().optional(),
     nextOffset: z.number().int().nonnegative().optional(),
+    totalMessages: z.number().int().nonnegative().optional(),
     inputReceipts: z.array(receiptSchema).optional(),
   })
   .passthrough();

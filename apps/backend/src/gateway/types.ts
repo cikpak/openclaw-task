@@ -86,6 +86,8 @@ export interface Gateway {
   ): Promise<{ artifact: Artifact; bytes: Buffer }>;
 }
 export interface GatewayAttachment {
+  /** Private manager/helper handoff only; never serialized as native attachment DTO. */
+  nativePath?: string | undefined;
   type: 'image' | 'file';
   mimeType: string;
   fileName: string;

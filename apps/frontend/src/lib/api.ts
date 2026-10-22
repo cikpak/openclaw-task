@@ -1,3 +1,4 @@
+import { applicationRequest } from './applicationRequest';
 import { record } from './validation';
 
 export class ApiError extends Error {
@@ -13,6 +14,8 @@ export async function request(
   path: string,
   options: RequestInit = {},
 ): Promise<{ data: unknown; etag: string | null }> {
+  if (path !== '/api/session' && path !== '/api/connection-tickets')
+    return applicationRequest(path, options);
   const response = await fetch(path, {
     credentials: 'same-origin',
     ...options,

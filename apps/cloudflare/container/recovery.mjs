@@ -8,7 +8,7 @@ import { upload, download } from './transfers.mjs';
 const stageRoot = join(runtime, 'staging');
 export function createRecovery() {
   return {
-    async capture({ checkpointId }, signal) {
+    async capture({ checkpointId, previousFiles = [] }, signal) {
       if (!validId(checkpointId)) throw new Error('Invalid checkpoint ID');
       await mkdir(stageRoot, { recursive: true, mode: 0o700 });
       const stage = join(stageRoot, checkpointId);
@@ -25,7 +25,7 @@ export function createRecovery() {
         const descriptor = await checkpoint(
           'capture',
           stage,
-          checkpointId,
+          { checkpointId, previousFiles },
           signal,
         );
         objects(descriptor);

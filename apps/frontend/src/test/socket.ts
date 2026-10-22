@@ -1,10 +1,12 @@
 import type {
-  ConversationCommand,
+  ManagerCommand,
   ConversationFrame,
   ChatSnapshot,
 } from '@messenger/contracts';
 import { vi } from 'vitest';
 import { frameValid } from '../lib/validation';
+import { ApiError } from '../lib/api';
+import { fixtureApplication } from './applicationDispatcher';
 import { snapshot } from './fixtures';
 
 export class TestSocket {
@@ -17,7 +19,7 @@ export class TestSocket {
   onmessage: ((event: { data: string }) => void) | null = null;
   onerror: (() => void) | null = null;
   onclose: ((event: { code: number }) => void) | null = null;
-  commands: ConversationCommand[] = [];
+  commands: ManagerCommand[] = [];
   autoSnapshots = true;
   constructor() {
     TestSocket.instances.push(this);
@@ -32,11 +34,12 @@ export class TestSocket {
     });
   }
   send(raw: string) {
-    const command = JSON.parse(raw) as ConversationCommand;
+    const command = JSON.parse(raw) as ManagerCommand;
     this.commands.push(command);
     if (
       this.autoSnapshots &&
-      command.type === 'conversation.snapshot.request'
+      (command.type === 'conversation.snapshot.request' ||
+        command.type === 'conversation.recent.request')
     ) {
       const snapshots = TestSocket.snapshots ?? [
         snapshot,
@@ -58,6 +61,31 @@ export class TestSocket {
         }),
       );
     }
+    if (!command.type.startsWith('conversation.')) {
+      void fixtureApplication(command).then(
+        (data) =>
+          this.receive({
+            type: 'command.result',
+            commandId: command.commandId,
+            ok: true,
+            data,
+          }),
+        (error: unknown) =>
+          this.receive({
+            type: 'command.result',
+            commandId: command.commandId,
+            ok: false,
+            error: {
+              type: 'about:blank',
+              title: 'Fixture request failed',
+              correlationId: 'test',
+              status: error instanceof ApiError ? error.status : 500,
+              code: error instanceof ApiError ? error.code : 'REQUEST_FAILED',
+              detail: error instanceof Error ? error.message : 'Fixture failed',
+            },
+          }),
+      );
+    }
     if (command.type === 'conversation.message.read')
       queueMicrotask(() =>
         this.receive({
@@ -70,7 +98,22 @@ export class TestSocket {
   }
   receive(frame: ConversationFrame) {
     if (!frameValid(frame)) throw new Error('Invalid fixture');
-    this.onmessage?.({ data: JSON.stringify(frame) });
+    const raw = JSON.stringify(frame);
+    if (raw.length <= 16000) this.onmessage?.({ data: raw });
+    else {
+      const id = crypto.randomUUID();
+      const count = Math.ceil(raw.length / 16000);
+      for (let index = 0; index < count; index++)
+        this.onmessage?.({
+          data: JSON.stringify({
+            type: 'manager.chunk',
+            id,
+            index,
+            count,
+            text: raw.slice(index * 16000, (index + 1) * 16000),
+          }),
+        });
+    }
   }
   close() {
     this.readyState = 3;

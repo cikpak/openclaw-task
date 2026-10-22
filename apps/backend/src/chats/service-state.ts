@@ -1,5 +1,6 @@
 import type {
   ActiveRun,
+  ChatSnapshot,
   ConversationEvent,
   PendingMessage,
   SettingsOperation,
@@ -48,6 +49,7 @@ export class ServiceState {
     readonly store: Store,
     readonly gateway: Gateway,
     readonly media?: MessageMedia,
+    readonly projectSnapshot?: (snapshot: ChatSnapshot) => ChatSnapshot,
   ) {
     this.titles = new TitleCoordinator(
       store,

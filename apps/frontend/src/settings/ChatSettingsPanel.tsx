@@ -209,7 +209,7 @@ export function ChatSettingsPanel({
     setCatalogReady(false);
     try {
       const [catalogResult, localResult] = await Promise.allSettled([
-        useModelCatalog.getState().load(snapshot.chat.id),
+        useModelCatalog.getState().load(snapshot.chat.id, true),
         request(`/api/chats/${snapshot.chat.id}`),
       ]);
       if (catalogResult.status === 'fulfilled') {

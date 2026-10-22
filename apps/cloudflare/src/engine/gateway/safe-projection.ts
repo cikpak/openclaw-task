@@ -54,6 +54,8 @@ export class SafeGatewayProjection {
       this.streams.set(key, entry);
     }
     entry.sequence = event.sequence;
+    // Keep unfinished tokens private while newly verified files become visible mid-run.
+    entry.stream.refresh(new BrowserProjection(this.policy()));
     let text = entry.stream.push(event.text);
     if (['final', 'aborted', 'error'].includes(event.state)) {
       text += entry.stream.finish();

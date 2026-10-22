@@ -7,6 +7,7 @@ import {
 } from '../../../backend/src/errors.js';
 import type { Store } from '../../../backend/src/storage/store.js';
 import type { Grant, ManagerEnv } from './types.js';
+import { sha256 } from '../../../backend/src/portable/sha256.js';
 
 const grantSchema = z.object({
   id: z.string().min(1),
@@ -134,10 +135,16 @@ export class ManagerAuthorization {
         current.accountId,
         'chatId' in command ? command.chatId : undefined,
       );
+      const serialized = JSON.stringify(command);
+      const fingerprint = `sha256:${sha256(serialized)}`;
       const previous = this.store.db
         .prepare('SELECT json FROM manager_command_inputs WHERE id = ?')
         .get(command.commandId) as { json: string } | undefined;
-      if (previous && previous.json !== JSON.stringify(command))
+      if (
+        previous &&
+        previous.json !== fingerprint &&
+        previous.json !== serialized
+      )
         throw new ConflictError(
           'COMMAND_ID_REUSED',
           'This command identity was already used with different values.',
@@ -149,8 +156,10 @@ export class ManagerAuthorization {
           'This command identity was already used with different values.',
         );
       this.store.db
-        .prepare('INSERT OR IGNORE INTO manager_command_inputs VALUES (?, ?)')
-        .run(command.commandId, JSON.stringify(command));
+        .prepare(
+          'INSERT INTO manager_command_inputs VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET json = excluded.json',
+        )
+        .run(command.commandId, fingerprint);
     })();
   }
 }

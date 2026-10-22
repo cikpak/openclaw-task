@@ -7,14 +7,57 @@ import { EngineDriver } from '../engine/driver.js';
 import { DurableLifecycle } from '../engine/lifecycle/index.js';
 import { materializeChats } from '../engine/creation.js';
 import { cacheOnlyCommand } from '../engine/cached-commands.js';
+import type { ManagerFiles } from '../files/service.js';
+import type { BrowserBoundary } from '../files/boundary.js';
+import { EngineFiles } from '../engine/files/service.js';
+import { UploadMedia } from '../files/uploads/media.js';
+import { pruneCachedSnapshot } from './cached-window.js';
+import { managerSecrets } from '../files/secrets.js';
 
 /** Engine work belongs to the manager, independently of browser sessions. */
 export function createManagerEngine(
   context: EngineContext,
+  files: ManagerFiles,
+  boundary: BrowserBoundary,
 ): ManagerEngine | undefined {
   if (!context.state.container) return undefined;
   const control = new PrivateContainer(context);
-  const gateway = new NativeGateway({
+  const engineFiles: EngineFiles = new EngineFiles({
+    storage: context.state.storage,
+    helper: (path, init) => control.fetch(path, init),
+    catalog: files.catalog,
+    summary: (mapping, summary) => {
+      const chat = context.store
+        .listChats()
+        .find(
+          (chat) =>
+            chat.agentId === mapping.agentId &&
+            chat.sessionKey === mapping.sessionKey,
+        );
+      if (chat)
+        context.publish({
+          type: 'conversation.tool',
+          chatId: chat.id,
+          tool: {
+            id: summary.id,
+            name: summary.operation,
+            status: summary.status,
+            parameters: '',
+            output: summary.text,
+          },
+          generation: 'manager',
+          sequence: 0,
+        });
+    },
+    secrets: () => managerSecrets(context),
+    mapping: (sessionKey) => {
+      const chat = context.store
+        .listChats()
+        .find((chat) => chat.sessionKey === sessionKey && chat.agentId);
+      return chat?.agentId ? { agentId: chat.agentId, sessionKey } : null;
+    },
+  });
+  const gateway: NativeGateway = new NativeGateway({
     fetcher: () => control.container.getTcpPort(18789),
     storage: context.state.storage,
     gatewayToken: control.gatewayToken(),
@@ -27,9 +70,9 @@ export function createManagerEngine(
       })) as { message: unknown };
       return result.message;
     },
+    observe: (frame) => engineFiles.observe(frame),
     publicationPolicy: () => ({
-      documentsRoots: [],
-      publications: [],
+      ...files.catalog.policy(),
       secrets: [
         ...control.secrets(),
         context.env.R2_ACCESS_KEY_ID ?? '',
@@ -39,8 +82,29 @@ export function createManagerEngine(
       ],
     }),
   });
-  const service = new ChatService(context.store, gateway, undefined, {
+  const media = new UploadMedia(files.uploads, gateway);
+  media.setHandoff(async (mapping, uploads) => {
+    const result = await engineFiles.handoff({ ...mapping, uploads });
+    return result.uploads.map((file) => {
+      files.recordInputPath(file.id, file.path);
+      const original = uploads.find((upload) => upload.id === file.id)!;
+      return {
+        type: file.mimeType.startsWith('image/')
+          ? ('image' as const)
+          : ('file' as const),
+        fileName: file.name,
+        mimeType: file.mimeType,
+        content: '',
+        sizeBytes: original.size,
+        origin: 'file' as const,
+        nativePath: file.path,
+      };
+    });
+  });
+  const service = new ChatService(context.store, gateway, media, {
     backgroundReconciliation: false,
+    projectSnapshot: (snapshot) =>
+      pruneCachedSnapshot(context.store, boundary.project(snapshot)),
   });
   service.onEvent((event) => {
     // Browser readiness means an authorized durable manager transport. Native
@@ -58,6 +122,31 @@ export function createManagerEngine(
     },
   );
   driver.cancellationRequested = () => lifecycle.state.wantWake;
+  driver.activeReaders = () => files.readers.live();
+  driver.beforeCapture = async () => {
+    await engineFiles.audit();
+    await files.inputs.audit((mapping, id) =>
+      engineFiles.inputMetadata(mapping, id),
+    );
+  };
+  driver.additionalWork = () => engineFiles.busy();
+  driver.onCommit = (descriptor) => files.commit(descriptor);
+  files.liveFiles = {
+    usable: () =>
+      control.container.running &&
+      [
+        'ready',
+        'preparing',
+        'stopping-writers',
+        'capturing',
+        'verifying',
+        'committing',
+        'cancelling',
+        'recovering',
+      ].includes(lifecycle.status),
+    read: (mapping, path) => engineFiles.read(mapping, path),
+    readInput: (mapping, id) => engineFiles.readInput(mapping, id),
+  };
   const tick = async () => {
     await lifecycle.tick();
     if (lifecycle.ready && !service.reconciled) {

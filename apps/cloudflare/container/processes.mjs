@@ -1,3 +1,4 @@
+import { gatewayEnvironment } from './gateway-environment.mjs';
 import { spawn } from 'node:child_process';
 import { verifyNoWriters } from './writers.mjs';
 import { readdir, readFile } from 'node:fs/promises';
@@ -41,7 +42,13 @@ export function createSupervisor() {
       const child = spawn(
         process.execPath,
         ['/app/openclaw.mjs', 'gateway', '--bind', 'lan', '--port', '18789'],
-        { uid: 1000, gid: 1000, detached: true, stdio: 'ignore' },
+        {
+          uid: 1000,
+          gid: 1000,
+          detached: true,
+          stdio: 'ignore',
+          env: gatewayEnvironment(),
+        },
       );
       state = 'starting';
       gateway = child;

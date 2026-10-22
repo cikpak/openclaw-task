@@ -100,7 +100,13 @@ export function cacheHistory(
     .prepare(
       'INSERT INTO chat_history VALUES (?, ?) ON CONFLICT(chat_id) DO UPDATE SET json = excluded.json',
     )
-    .run(id, JSON.stringify(snapshotSchema.parse(snapshot)));
+    .run(
+      id,
+      JSON.stringify(
+        ctx.projectSnapshot?.(snapshotSchema.parse(snapshot)) ??
+          snapshotSchema.parse(snapshot),
+      ),
+    );
 }
 export async function snapshot(
   ctx: ServiceState,

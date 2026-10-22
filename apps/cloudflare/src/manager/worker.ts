@@ -8,6 +8,7 @@ export default {
     if (
       path !== '/ws/conversation' &&
       path !== '/internal/revoke' &&
+      !/^\/downloads\/[^/]+$/.test(path) &&
       !path.startsWith('/internal/files/')
     )
       return Response.json({ error: 'NOT_FOUND' }, { status: 404 });

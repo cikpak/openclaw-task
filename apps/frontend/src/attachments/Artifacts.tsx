@@ -4,6 +4,7 @@ import { ErrorNotice } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import styles from './Attachments.module.css';
+import { AgentFileChat, AgentFileLink } from './AgentFileLink';
 import { useConversationFiles } from './useConversationFiles';
 
 export function ArtifactLinks({
@@ -16,15 +17,14 @@ export function ArtifactLinks({
   return (
     <div className={styles.items}>
       {artifacts.map((artifact) => (
-        <a
-          className={styles.item}
-          key={artifact.id}
-          href={`/api/chats/${encodeURIComponent(chatId)}/artifacts/${encodeURIComponent(artifact.id)}`}
-          download={artifact.name}
-        >
-          <Icon name="download" /> {artifact.name}{' '}
-          <small>{Math.ceil(artifact.sizeBytes / 1024)} KB</small>
-        </a>
+        <AgentFileChat.Provider value={chatId} key={artifact.id}>
+          <span className={styles.item}>
+            <AgentFileLink href={`file:${artifact.id}`}>
+              {artifact.name}
+            </AgentFileLink>{' '}
+            <small>{Math.ceil(artifact.sizeBytes / 1024)} KB</small>
+          </span>
+        </AgentFileChat.Provider>
       ))}
     </div>
   );
@@ -118,7 +118,11 @@ function ArtifactPanel({ chatId }: { chatId: string }) {
               <div className={styles.items}>
                 {shared.files.map((file) => (
                   <span className={styles.item} key={file.uploadId}>
-                    <Icon name="file" /> {file.name}{' '}
+                    <AgentFileChat.Provider value={chatId}>
+                      <AgentFileLink href={`file:${file.uploadId}`}>
+                        {file.name}
+                      </AgentFileLink>
+                    </AgentFileChat.Provider>{' '}
                     <small>{Math.ceil(file.size / 1024)} KB</small>
                   </span>
                 ))}

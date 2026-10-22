@@ -1,3 +1,4 @@
+import { gatewayEnvironment } from './gateway-environment.mjs';
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { members } from './processes.mjs';
@@ -11,6 +12,7 @@ export function command(args, signal) {
       process.execPath,
       ['/app/openclaw.mjs', 'devices', ...args, '--json'],
       {
+        env: gatewayEnvironment(),
         uid: 1000,
         gid: 1000,
         detached: true,

@@ -114,19 +114,24 @@ export class PrivateContainer {
     });
     await this.attach();
   }
-  async request<T>(path: string, data?: unknown): Promise<T> {
-    const credentials = this.credentials;
-    const response = await this.container
+  async fetch(path: string, init: RequestInit = {}): Promise<Response> {
+    const headers = new Headers(init.headers);
+    headers.set('authorization', `Bearer ${this.credentials.helper}`);
+    return this.container
       .getTcpPort(8787)
-      .fetch(`http://helper${path}`, {
-        method: data === undefined ? 'GET' : 'POST',
-        headers: {
-          authorization: `Bearer ${credentials.helper}`,
-          ...(data === undefined ? {} : { 'content-type': 'application/json' }),
-        },
-        ...(data === undefined ? {} : { body: JSON.stringify(data) }),
-        signal: AbortSignal.timeout(15_000),
-      });
+      .fetch(`http://helper${path}`, { ...init, headers });
+  }
+  async request<T>(path: string, data?: unknown): Promise<T> {
+    const response = await this.fetch(path, {
+      method: data === undefined ? 'GET' : 'POST',
+      ...(data === undefined
+        ? {}
+        : {
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(data),
+          }),
+      signal: AbortSignal.timeout(15_000),
+    });
     if (!response.ok) {
       await response.body?.cancel();
       throw new Error('Private engine helper unavailable');

@@ -65,7 +65,11 @@ export type ApplicationCommand =
       version: number;
       preferences: Omit<Preferences, 'version'>;
     })
-  | (Base & { type: 'models.list'; chatId?: string | undefined })
+  | (Base & {
+      type: 'models.list';
+      chatId?: string | undefined;
+      cachedOnly?: boolean | undefined;
+    })
   | (Chat & { type: 'files.list'; category: 'shared' | 'generated' | 'all' })
   | (Chat & { type: 'files.resolve'; fileId: string })
   | (Base & {
@@ -100,6 +104,7 @@ export interface ManagerResultData {
   models?: ModelCapability[] | undefined;
   files?: BrowserFile[] | undefined;
   file?: BrowserFile | undefined;
+  download?: { url: string; expiresAt: number } | undefined;
   upload?: Attachment | undefined;
   uploadId?: string | undefined;
   nextOffset?: number | undefined;
@@ -119,3 +124,12 @@ export type ManagerResult =
       error: ProblemDetails;
     };
 export type ManagerFrame = ManagerResult | ConversationEvent;
+
+/** Ordered JSON transport fragments; complete messages are never truncated. */
+export interface ManagerChunk {
+  type: 'manager.chunk';
+  id: string;
+  index: number;
+  count: number;
+  text: string;
+}

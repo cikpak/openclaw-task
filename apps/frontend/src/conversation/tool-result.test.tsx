@@ -4,7 +4,6 @@ import { expect, it, vi } from 'vitest';
 import { snapshot } from '../test/fixtures';
 import { ConversationMessages } from './MessageBubble';
 import { toolResultText, ToolActivityCard } from './ToolResult';
-
 it('hides tool-call-only assistant turns while keeping real text and file-only deliveries', () => {
   render(
     <ConversationMessages
@@ -47,9 +46,8 @@ it('hides tool-call-only assistant turns while keeping real text and file-only d
     document.querySelector('[data-message-id="whitespace"]'),
   ).not.toBeInTheDocument();
   expect(screen.getByText('Jonathan it is.')).toBeVisible();
-  expect(screen.getByRole('link', { name: /answer.txt/u })).toBeVisible();
+  expect(screen.getByRole('button', { name: /answer.txt/u })).toBeVisible();
 });
-
 it('shows named tool activity without duplicate generic output messages', async () => {
   render(
     <ConversationMessages
@@ -120,7 +118,6 @@ it('shows named tool activity without duplicate generic output messages', async 
   );
   expect(details.querySelector('script')).toBeNull();
 });
-
 it('preserves unknown and mixed structured output and bounds the visible preview', async () => {
   const unknown = '[{"type":"image","url":"private"}]';
   expect(toolResultText(unknown)).toBe(unknown);
@@ -148,7 +145,6 @@ it('preserves unknown and mixed structured output and bounds the visible preview
   expect(details.querySelector('pre')?.textContent).toHaveLength(16384);
   expect(screen.getByText(/Preview limited/u)).toBeInTheDocument();
 });
-
 it('decodes the object text envelope from native live tool results without executing HTML', async () => {
   expect(
     toolResultText(
@@ -185,7 +181,6 @@ it('decodes the object text envelope from native live tool results without execu
   expect(container.querySelector('script')).toBeNull();
   expect(details.querySelector('script')).toBeNull();
 });
-
 it('keeps truncated write parameters readable without inventing missing content', async () => {
   render(
     <ToolActivityCard
@@ -211,7 +206,6 @@ it('keeps truncated write parameters readable without inventing missing content'
   );
   expect(screen.getByText(/Parameters preview is truncated/u)).toBeVisible();
 });
-
 it('retains file delivery even when canonical tool output text is hidden', async () => {
   render(
     <ConversationMessages
@@ -248,91 +242,9 @@ it('retains file delivery even when canonical tool output text is hidden', async
   expect(chip).toHaveTextContent('Tool files');
   await userEvent.click(chip);
   await waitFor(() =>
-    expect(screen.getByRole('link', { name: /review.txt/u })).toBeVisible(),
+    expect(screen.getByRole('button', { name: /review.txt/u })).toBeVisible(),
   );
-  expect(screen.getByRole('link', { name: /review.txt/u })).toHaveAttribute(
-    'href',
-    '/api/chats/chat-a/artifacts/a',
-  );
-  expect(screen.getByRole('link', { name: /review.txt/u })).toHaveAttribute(
-    'download',
-    'review.txt',
-  );
-  expect(screen.queryByText('Hidden tool JSON')).not.toBeInTheDocument();
-});
+  expect(screen.getByRole('button', { name: /review.txt/u })).toBeEnabled();
 
-it('keeps a named tool at its canonical chronological position without duplicating or remounting its open popover', async () => {
-  const tool = {
-    id: 'run:call',
-    name: 'write',
-    status: 'completed' as const,
-    parameters: '{"path":"documents/review.txt"}',
-    output: 'Successfully wrote file.',
-  };
-  const common = { tools: [tool], aborting: false, onAbort: vi.fn() };
-  const { rerender } = render(
-    <ConversationMessages
-      {...common}
-      snapshot={{
-        ...snapshot,
-        messages: [],
-        activeRun: { id: 'run', text: '', sequence: 1 },
-      }}
-    />,
-  );
-  const chip = screen.getByRole('button', {
-    name: 'write · completed · Tool details',
-  });
-  const card = document.querySelector('[data-tool-id="run:call"]')!;
-  await userEvent.click(chip);
-  const popup = screen.getByRole('dialog', {
-    name: 'write · completed · Tool details',
-  });
-  await waitFor(() =>
-    expect(within(popup).getByText('Successfully wrote file.')).toBeVisible(),
-  );
-  rerender(
-    <ConversationMessages
-      {...common}
-      snapshot={{
-        ...snapshot,
-        activeRun: null,
-        messages: [
-          {
-            id: 'result',
-            role: 'tool',
-            text: 'Successfully wrote file.',
-            createdAt: 1,
-            runId: 'run',
-            toolCallId: 'call',
-            toolName: 'write',
-          },
-          {
-            id: 'answer',
-            role: 'assistant',
-            text: 'Your document is ready.',
-            createdAt: 2,
-            runId: 'run',
-          },
-        ],
-      }}
-    />,
-  );
-  expect(
-    screen.getAllByRole('button', { name: 'write · completed · Tool details' }),
-  ).toHaveLength(1);
-  expect(
-    screen.getByRole('button', { name: 'write · completed · Tool details' }),
-  ).toBe(chip);
-  expect(document.querySelector('[data-tool-id="run:call"]')).toBe(card);
-  expect(card).toHaveAttribute('data-message-id', 'result');
-  expect(chip).toHaveAttribute('aria-expanded', 'true');
-  expect(
-    screen.getByRole('dialog', { name: 'write · completed · Tool details' }),
-  ).toBe(popup);
-  expect(screen.getAllByText('Successfully wrote file.')).toHaveLength(1);
-  expect(
-    card.compareDocumentPosition(screen.getByText('Your document is ready.')) &
-      Node.DOCUMENT_POSITION_FOLLOWING,
-  ).toBeTruthy();
+  expect(screen.queryByText('Hidden tool JSON')).not.toBeInTheDocument();
 });

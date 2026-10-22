@@ -14,9 +14,35 @@ export class HistoryOperations {
   ): Promise<GatewayHistory> {
     const generation = this.context.capabilityGeneration;
     // Gateway cursors catch up forwards; older pages use the authoritative nextOffset.
-    const offset = options.cursor
+    let offset = options.cursor
       ? Number(/^older:(\d+)$/.exec(options.cursor)?.[1])
       : undefined;
+    let anchorTotal: number | undefined;
+    const before = options.cursor
+      ? /^before:(\d+)$/.exec(options.cursor)
+      : null;
+    if (before) {
+      const sequence = Number(before[1]);
+      const head = historySchema.parse(
+        await this.context.request('chat.history', {
+          sessionKey: mapping.sessionKey,
+          agentId: mapping.agentId,
+          limit: 1,
+          maxBytes: 262144,
+        }),
+      );
+      if (
+        !Number.isSafeInteger(sequence) ||
+        sequence < 1 ||
+        head.totalMessages === undefined ||
+        head.totalMessages < sequence
+      )
+        throw new ValidationError(
+          'The conversation history changed. Refresh this chat before loading earlier messages.',
+        );
+      anchorTotal = head.totalMessages;
+      offset = head.totalMessages - sequence + 1;
+    }
     if (options.cursor && (!Number.isSafeInteger(offset) || (offset ?? 0) < 1))
       throw new ValidationError(
         'The history page is invalid. Refresh this chat.',
@@ -33,6 +59,10 @@ export class HistoryOperations {
           : {}),
       }),
     );
+    if (anchorTotal !== undefined && data.totalMessages !== anchorTotal)
+      throw new ValidationError(
+        'The conversation history changed while loading. Try loading earlier messages again.',
+      );
     data.messages = await completeMessages(
       this.context,
       mapping,

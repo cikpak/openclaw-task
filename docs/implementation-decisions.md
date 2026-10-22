@@ -34,3 +34,20 @@ Short execution decisions recorded while implementing the approved Cloudflare pl
 - Full-message helper imports use named exports from the immutable image's own bundles. NPM distribution bundle hashes differ despite the same version; image/SDK upgrades must rerun exact long-message recovery verification. Native message-API transport failures can use the same exact-scope safe fallback.
 
 - Writer drain verifies all live engine-UID processes and writable recovery descriptors across `/proc`, including detached process groups. Remaining writers fail closed; the helper never kills unrelated processes. Configured workspaces cannot resolve into excluded cache/tmp trees.
+
+## Phase 4: files, safe history, and browser integration
+
+- Application data now travels through authorized manager WebSockets. Authentication, admission tickets, and separately authorized opaque downloads retain HTTP.
+- R2 uploads reserve the existing per-account quota before accepting bounded chunks; acknowledged content and metadata survive manager reconstruction. Accepted attachment references are bound transactionally to their intended chat.
+- Native media handoff uses stable private session files because the pinned protocol only supports inline base64 and cannot carry the approved aggregate size. The exact submission-specific appendix is retained privately and removed from public history. Native image reads were verified in the pinned image.
+- Deliverables require successful eligible write/edit evidence and a verified documents path. Credential scans, stopped-writer audits, and exact digest matching protect live and committed downloads. Mere placement never publishes unknown files.
+- Downloads use backend-issued single-use, exact-session permissions lasting 60 seconds. Admitted streams outlive authentication changes; independent durable reader leases delay final stop and cleanup. A stalled stream has a 90-second inactivity timeout.
+- The safe history cache uses measured viewport dimensions and whole messages. Native sequence anchors preserve older-page navigation when new messages arrive. Completed replies travel in ordered fragments without truncation.
+- Unchanged hidden settings and queued text preserve their canonical private values. Partial edits containing redaction placeholders return a controlled error rather than overwrite hidden work.
+- New recovery user objects use generation-qualified immutable keys. Only exact currently committed objects may be reused, preventing late cleanup from deleting a later incarnation after restart.
+- Upload command identity records retain compact SHA-256 fingerprints; legacy records migrate on verified replay. This preserves ownership/reuse fences without storing upload base64 outside its retention quota.
+
+Validation includes actual Workers/D1/R2 upload and download admission, delayed and uncertain cleanup, reader pins, native SDK authentication and image reads, stable native pagination, complete 2.53-million-character replies, and real desktop/mobile cached access without an engine binding. A real provider execution cycle remains blocked by the unavailable valid provider key; no synthetic production provider was introduced.
+
+- Input files use the same complete exact known-secret set as generated deliverables. Upload completion rejects known server secrets; changed handed-off inputs are audited before capture and bound to their verified digest. Failed publication audits preserve meaningful private bytes while disabling both existing download permissions and stale staging fallback.
+- Successful native write classification keeps minimal private durable start/result evidence across manager reconstruction. Files whose relevant events were entirely unobserved stay private until later explicit verified publication evidence.

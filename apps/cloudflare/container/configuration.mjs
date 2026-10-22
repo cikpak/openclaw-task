@@ -109,6 +109,7 @@ export async function initialize({ identity, config = defaults() }) {
     process.env.HOME,
     process.env.TMPDIR,
     process.env.XDG_CACHE_HOME,
+    process.env.XDG_CACHE_HOME,
     `${root}/workspace`,
   ]) {
     await mkdir(path, { recursive: true, mode: 0o700 });

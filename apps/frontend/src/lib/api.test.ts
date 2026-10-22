@@ -1,6 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import { request } from './api';
-it('does not send JSON Content-Type for an empty DELETE request', async () => {
+import { registerApplicationDispatcher } from './manager';
+it('does not send JSON Content-Type for an empty authentication DELETE request', async () => {
   const fetcher = vi
     .fn<typeof fetch>()
     .mockResolvedValue(new Response(null, { status: 204 }));
@@ -12,12 +13,10 @@ it('does not send JSON Content-Type for an empty DELETE request', async () => {
     headers: {},
   });
 });
-it('preserves server ETags and sends JSON Content-Type for actual JSON bodies', async () => {
-  const fetcher = vi
-    .fn<typeof fetch>()
-    .mockResolvedValue(
-      new Response('{}', { status: 200, headers: { ETag: '"9"' } }),
-    );
+it('maps application versions into a manager command and derives the returned resource ETag', async () => {
+  const dispatch = vi.fn().mockResolvedValue({ preferences: { version: 9 } });
+  registerApplicationDispatcher(dispatch);
+  const fetcher = vi.fn();
   vi.stubGlobal('fetch', fetcher);
   const result = await request('/api/preferences', {
     method: 'PATCH',
@@ -25,10 +24,11 @@ it('preserves server ETags and sends JSON Content-Type for actual JSON bodies', 
     headers: { 'If-Match': '"8"' },
   });
   expect(result.etag).toBe('"9"');
-  expect(fetcher).toHaveBeenCalledWith('/api/preferences', {
-    credentials: 'same-origin',
-    method: 'PATCH',
-    body: '{}',
-    headers: { 'Content-Type': 'application/json', 'If-Match': '"8"' },
+  expect(dispatch).toHaveBeenCalledWith({
+    type: 'preferences.update',
+    commandId: expect.any(String) as string,
+    version: 8,
+    preferences: {},
   });
+  expect(fetcher).not.toHaveBeenCalled();
 });

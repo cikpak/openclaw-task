@@ -1,17 +1,14 @@
-import type {
-  ConversationCommand,
-  ConversationResult,
-} from '@messenger/contracts';
+import type { ManagerCommand, ManagerResult } from '@messenger/contracts';
 export type Send = (
-  command: ConversationCommand,
-) => Promise<Extract<ConversationResult, { ok: true }>['data']>;
+  command: ManagerCommand,
+) => Promise<Extract<ManagerResult, { ok: true }>['data']>;
 export interface Pending {
-  resolve(data: Extract<ConversationResult, { ok: true }>['data']): void;
+  resolve(data: Extract<ManagerResult, { ok: true }>['data']): void;
   reject(error: Error): void;
   timer: number;
   chatSequences: Record<string, number>;
   chatId: string | undefined;
-  type: ConversationCommand['type'];
+  type: ManagerCommand['type'];
   snapshotOrder: number;
   connectionEpoch: number;
 }

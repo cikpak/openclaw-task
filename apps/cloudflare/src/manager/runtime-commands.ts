@@ -1,3 +1,4 @@
+import { modelCache } from './cached-models.js';
 import type { ManagerCommand, ManagerResultData } from '@messenger/contracts';
 import {
   NotFoundError,
@@ -55,11 +56,11 @@ export async function runtimeCommand(
     };
   }
   if (command.type === 'models.list') {
-    return {
-      models: await gateway.models(
-        command.chatId ? mapping(store.getChat(command.chatId)) : undefined,
-      ),
-    };
+    const models = await gateway.models(
+      command.chatId ? mapping(store.getChat(command.chatId)) : undefined,
+    );
+    modelCache(store).save(models, command.chatId);
+    return { models };
   }
   if (!command.type.startsWith('conversation.')) throw new NotFoundError();
   const result = await service.command(

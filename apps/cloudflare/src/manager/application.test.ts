@@ -1,7 +1,9 @@
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { Store } from '../../../backend/src/database.js';
 import { ManagerApplication } from './application.js';
 import { ManagerAuthorization } from './authorization.js';
+import { BrowserBoundary } from '../files/boundary.js';
+import type { ManagerCommand } from '@messenger/contracts';
 import { recentMessages } from './cached.js';
 import type { Grant, ManagerEngine, ManagerEnv } from './types.js';
 
@@ -12,7 +14,7 @@ const settings = {
   thinkingLevel: 'off',
   fastMode: false,
 };
-function setup(engine?: ManagerEngine) {
+function setup(engine?: ManagerEngine, boundary?: BrowserBoundary) {
   const store = new Store(':memory:');
   stores.push(store);
   const grant: Grant = {
@@ -32,6 +34,8 @@ function setup(engine?: ManagerEngine) {
     authorization,
     engine,
     (work) => void work.catch(() => {}),
+    undefined,
+    boundary,
   );
   return {
     store,
@@ -173,7 +177,7 @@ it('blocks foreign-account command IDs before the domain cached-result boundary'
     chatId: other.id,
   });
   expect(!attack.ok && attack.error.status).toBe(404);
-  expect(commands).toBe(1);
+  expect(commands).toBe(0);
 });
 it('sizes recent history by viewport while preserving long complete replies', () => {
   const messages = Array.from({ length: 100 }, (_, index) => ({
@@ -192,4 +196,49 @@ it('sizes recent history by viewport while preserving long complete replies', ()
     { id: 'long', role: 'assistant' as const, text, createdAt: 101 },
   ];
   expect(recentMessages(long, viewport)).toEqual([long.at(-1)]);
+});
+
+it('restores canonical rename values for engine execution and replays safe metadata without waking', async () => {
+  const wake = vi.fn(() => Promise.resolve());
+  const handle = vi.fn((command: ManagerCommand) => {
+    if (command.type !== 'chat.rename') return Promise.resolve(undefined);
+    const chat = {
+      ...app.store.getChat(command.chatId),
+      name: command.name,
+      version: command.version + 1,
+    };
+    app.store.saveChat(chat);
+    return Promise.resolve({ chat });
+  });
+  const boundary = new BrowserBoundary(() => ({
+    documentsRoots: [],
+    publications: [],
+  }));
+  const app = setup({ wake, handle } as unknown as ManagerEngine, boundary);
+  const created = await create(app);
+  const name = 'Review /recovery/private/team.txt';
+  app.store.saveChat({ ...app.store.getChat(created.id), name });
+  const command = {
+    type: 'chat.rename',
+    commandId: crypto.randomUUID(),
+    chatId: created.id,
+    version: 1,
+    name: boundary.project(name),
+  };
+  const first = await app.dispatch(command);
+  expect(first.ok).toBe(true);
+  expect(handle).toHaveBeenCalledExactlyOnceWith({ ...command, name }, 'owner');
+  expect(app.store.getChat(created.id).name).toBe(name);
+  expect(first.ok && first.data.chat?.name).toBe(boundary.project(name));
+  app.store.saveChat({ ...app.store.getChat(created.id), name: 'Later name' });
+  wake.mockClear();
+  expect(await app.dispatch(command)).toEqual(first);
+  expect(handle).toHaveBeenCalledTimes(1);
+  expect(wake).not.toHaveBeenCalled();
+  expect(app.store.getChat(created.id).name).toBe('Later name');
+  const altered = await app.dispatch({
+    ...command,
+    name: 'Changed command values',
+  });
+  expect(!altered.ok && altered.error.code).toBe('COMMAND_ID_REUSED');
 });

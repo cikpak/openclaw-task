@@ -1,3 +1,4 @@
+import { registerApplicationDispatcher } from '../lib/manager';
 import { ApiError, request } from '../lib/api';
 import { record } from '../lib/validation';
 import { useChatProjection } from '../state/stores';
@@ -35,6 +36,7 @@ export function startConnection(
   refresh: () => Promise<void>,
 ) {
   let disposed = false;
+  let unregister: (() => void) | undefined;
   let retry: number | undefined;
   let epoch = 0;
   let attempts = 0;
@@ -89,6 +91,8 @@ export function startConnection(
     ws.onopen = () => {
       if (!current()) return;
       attempts = 0;
+      unregister?.();
+      unregister = registerApplicationDispatcher(send);
       useChatProjection.getState().markTransportOpen();
       void refreshConnectionCatalog(ws, send, current);
     };
@@ -97,6 +101,7 @@ export function startConnection(
     };
     ws.onclose = (event) => {
       if (!current()) return;
+      unregister?.();
       state.socket.current = null;
       frames?.flush();
       frames?.dispose();
@@ -113,6 +118,7 @@ export function startConnection(
   void connect();
   return () => {
     disposed = true;
+    unregister?.();
     epoch++;
     controller?.abort();
     if (retry !== undefined) window.clearTimeout(retry);

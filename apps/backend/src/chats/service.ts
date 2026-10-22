@@ -35,6 +35,7 @@ export { mapping, summary } from './service-record.js';
 export interface ServiceOptions {
   /** Durable Object alarms can drive recovery instead of process timers. */
   backgroundReconciliation?: boolean;
+  projectSnapshot?: (snapshot: ChatSnapshot) => ChatSnapshot;
 }
 export class ChatService extends ServiceState {
   constructor(
@@ -43,7 +44,7 @@ export class ChatService extends ServiceState {
     media?: MessageMedia,
     options: ServiceOptions = {},
   ) {
-    super(store, gateway, media);
+    super(store, gateway, media, options.projectSnapshot);
     if (options.backgroundReconciliation !== false)
       this.recoveryTimer = setInterval(() => {
         if (

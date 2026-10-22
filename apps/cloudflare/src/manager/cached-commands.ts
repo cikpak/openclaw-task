@@ -1,3 +1,6 @@
+import { rememberViewport, pruneCachedSnapshot } from './cached-window.js';
+import { markCachedRead } from './cached-read.js';
+import { modelCache } from './cached-models.js';
 import type { ManagerCommand, ManagerResultData } from '@messenger/contracts';
 import { NotFoundError } from '../../../backend/src/errors.js';
 import { readPreferences } from '../../../backend/src/chats/preferences.js';
@@ -34,6 +37,25 @@ export class CachedCommands {
           ? { preferences: readPreferences(store) }
           : {}),
       };
+    if (command.type === 'conversation.message.read')
+      return markCachedRead(store, command.commandId, command.chatId);
+    if (command.type === 'models.list' && command.cachedOnly)
+      return { models: modelCache(store).read(command.chatId) };
+    if (
+      command.type === 'conversation.history.request' &&
+      command.cursor?.startsWith('cache:')
+    ) {
+      const snapshot = this.snapshot(command.chatId);
+      const index = snapshot.messages.findIndex(
+        (message) => message.id === command.cursor!.slice(6),
+      );
+      if (index < 0) throw new NotFoundError();
+      return {
+        messages: snapshot.messages.slice(0, index),
+        historyCursor: snapshot.historyCursor,
+        hasOlderHistory: snapshot.hasOlderHistory,
+      };
+    }
     if (command.type === 'preferences.get')
       return { preferences: readPreferences(store) };
     if (command.type === 'chat.get')
@@ -57,12 +79,27 @@ export class CachedCommands {
             ),
           };
     if (command.type === 'conversation.recent.request') {
-      const snapshot = this.snapshot(command.chatId);
+      rememberViewport(store, command.chatId, command.viewport);
+      const snapshot = pruneCachedSnapshot(
+        store,
+        this.snapshot(command.chatId),
+      );
+      const cached = store.db
+        .prepare('SELECT chat_id FROM chat_history WHERE chat_id = ?')
+        .get(command.chatId);
+      if (cached)
+        store.db
+          .prepare('UPDATE chat_history SET json = ? WHERE chat_id = ?')
+          .run(JSON.stringify(snapshot), command.chatId);
       const messages = recentMessages(snapshot.messages, command.viewport);
       return {
         snapshot: {
           ...snapshot,
           messages,
+          historyCursor:
+            messages.length < snapshot.messages.length && messages[0]
+              ? `cache:${messages[0].id}`
+              : snapshot.historyCursor,
           hasOlderHistory:
             snapshot.hasOlderHistory ||
             messages.length < snapshot.messages.length,

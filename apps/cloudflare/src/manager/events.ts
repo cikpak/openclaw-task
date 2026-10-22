@@ -3,6 +3,9 @@ import { parseOutboundEvent } from '../../../backend/src/outbound.js';
 import type { Store } from '../../../backend/src/storage/store.js';
 import type { ManagerAuthorization } from './authorization.js';
 import type { SocketAuthorization } from './socket-auth.js';
+import type { BrowserBoundary } from '../files/boundary.js';
+import { sendFrame } from './framing.js';
+import { saveTool } from '../../../backend/src/chats/tools.js';
 
 /** One durable stream identity covers cached events and native-service events. */
 export class ManagerEvents {
@@ -11,6 +14,7 @@ export class ManagerEvents {
     private readonly store: Store,
     private readonly authorization: ManagerAuthorization,
     private readonly sockets: SocketAuthorization,
+    private readonly boundary?: BrowserBoundary,
   ) {
     store.db.exec(
       'CREATE TABLE IF NOT EXISTS manager_stream (id INTEGER PRIMARY KEY CHECK(id = 1), generation TEXT NOT NULL, sequence INTEGER NOT NULL)',
@@ -24,14 +28,22 @@ export class ManagerEvents {
       const stream = this.store.db
         .prepare('SELECT generation, sequence FROM manager_stream WHERE id = 1')
         .get() as { generation: string; sequence: number };
-      const event = parseOutboundEvent({
-        ...value,
-        generation: stream.generation,
-        sequence: stream.sequence + 1,
-      });
+      const event = parseOutboundEvent(
+        this.boundary?.project({
+          ...value,
+          generation: stream.generation,
+          sequence: stream.sequence + 1,
+        }) ?? {
+          ...value,
+          generation: stream.generation,
+          sequence: stream.sequence + 1,
+        },
+      );
       this.store.db
         .prepare('UPDATE manager_stream SET sequence = ? WHERE id = 1')
         .run(event.sequence);
+      if (event.type === 'conversation.tool')
+        saveTool(this.store, event.chatId, event.tool, event.sequence);
       return event;
     })();
   }
@@ -42,7 +54,7 @@ export class ManagerEvents {
       generation: 'manager',
       sequence: 0,
     });
-    socket.send(JSON.stringify(event));
+    sendFrame(socket, event);
   }
   publish(value: ConversationEvent): void {
     let event: ConversationEvent;
@@ -67,7 +79,7 @@ export class ManagerEvents {
       )
         continue;
       try {
-        socket.send(JSON.stringify(event));
+        sendFrame(socket, event);
       } catch {
         /* Retained state supports reconnect. */
       }

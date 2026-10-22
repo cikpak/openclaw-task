@@ -31,7 +31,9 @@ export function objects(descriptor) {
     if (
       object !== descriptor.archive &&
       object !== descriptor.manifest &&
-      object.key !== `files/${object.sha256}`
+      !new RegExp(`^files/(?:[A-Za-z0-9_-]{1,80}/)?${object.sha256}$`).test(
+        object.key,
+      )
     )
       throw new Error('Invalid user object key');
     const previous = unique.get(object.key);

@@ -15,8 +15,7 @@ test('actual Workers streams and verifies recovery checksums before durable refe
         async fetch(request) {
           const store = new DurableObjectStore(this.ctx.storage);
           store.db.exec('CREATE TABLE IF NOT EXISTS recovery_references (id INTEGER PRIMARY KEY CHECK(id = 1), current TEXT NOT NULL, previous TEXT)');
-          const driver = Object.create(EngineDriver.prototype);
-          driver.context = {store};
+          const driver = new EngineDriver({store,env:{RECOVERY_BUCKET:this.env.BUCKET}},null,null,null);
           const input = new Uint8Array(5 * 1024 * 1024 + 113).fill(97);
           const sha256 = Buffer.from(await crypto.subtle.digest('SHA-256',input)).toString('hex');
           const object = key => ({key,size:input.length,sha256,md5:'YWFhYWFhYWFhYWFhYWFhYQ=='});
@@ -26,7 +25,11 @@ test('actual Workers streams and verifies recovery checksums before durable refe
           await this.env.BUCKET.put(descriptor.archive.key,input);
           await this.env.BUCKET.put(descriptor.manifest.key,input);
           await objects.verify(checkpoint);
-          const old = {...checkpoint,generation:'old'};
+          const oldDescriptor = {...descriptor,checkpointId:'old',archive:object('recovery/old/internal.tar.gz'),manifest:object('recovery/old/manifest.json')};
+          const old = {generation:'old',manifestKey:oldDescriptor.manifest.key,manifestSha256:sha256,descriptor:oldDescriptor};
+          await this.env.BUCKET.put(oldDescriptor.archive.key,input);
+          await this.env.BUCKET.put(oldDescriptor.manifest.key,input);
+          await objects.verify(old);
           this.ctx.storage.transactionSync(() => driver.commit(old));
           this.ctx.storage.transactionSync(() => driver.commit(checkpoint));
           this.ctx.storage.transactionSync(() => driver.commit(checkpoint));

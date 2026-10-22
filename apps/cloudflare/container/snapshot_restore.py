@@ -1,4 +1,4 @@
-import json, os, pathlib, shutil, tarfile, tempfile
+import json, os, pathlib, shutil, tarfile, tempfile, re
 from snapshot_common import ROOT, EXCLUDED, safe_path, validate_link, excluded, inventory, inventory_digest, digest, digest_stream, apply_metadata
 from snapshot_sqlite import database_checks
 
@@ -25,7 +25,7 @@ def validate_objects(stage, manifest, descriptor, mapping):
     if [{key:value for key,value in entry.items() if key != 'md5'} for entry in descriptor['files']] != [{key:value for key,value in entry.items() if key != 'local'} for entry in files]: raise ValueError('Descriptor mapping mismatch')
     for path, item in file_entries.items():
         entry = mapping.get(path)
-        if not entry or entry['kind'] != 'file' or item['local'] != 'user-' + entry['sha256'] or item['key'] != 'files/' + entry['sha256']: raise ValueError('Invalid user file mapping')
+        if not entry or entry['kind'] != 'file' or item['local'] != 'user-' + entry['sha256'] or not re.fullmatch(r'files/(?:[A-Za-z0-9_-]{1,80}/)?' + entry['sha256'], item['key']): raise ValueError('Invalid user file mapping')
         source = stage / item['local']
         if source.stat().st_size != entry['size'] or digest(source) != entry['sha256']: raise ValueError('User file hash mismatch')
     expected = {path:entry for path,entry in mapping.items() if path not in file_entries}

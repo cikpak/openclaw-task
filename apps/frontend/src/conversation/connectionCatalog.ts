@@ -1,3 +1,4 @@
+import { recentViewport } from './recentViewport';
 import { commandId, request } from '../lib/api';
 import { chatValid, record } from '../lib/validation';
 import { useChatProjection, useNotices } from '../state/stores';
@@ -27,7 +28,8 @@ export async function refreshConnectionCatalog(
       if (!current() || ws.readyState !== WebSocket.OPEN) return;
       try {
         await send({
-          type: 'conversation.snapshot.request',
+          type: 'conversation.recent.request',
+          viewport: recentViewport(),
           commandId: commandId(),
           chatId: chat.id,
         });

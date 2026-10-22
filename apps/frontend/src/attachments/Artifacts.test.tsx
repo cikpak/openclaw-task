@@ -22,15 +22,14 @@ const reply = (data: unknown, status = 200) =>
 function fixture() {
   const calls: {
     url: string;
-    signal: AbortSignal;
     finish: (response: Response) => void;
   }[] = [];
   vi.stubGlobal(
     'fetch',
     vi.fn(
-      (url: string, options: RequestInit) =>
+      (url: string) =>
         new Promise<Response>((finish) => {
-          calls.push({ url, signal: options.signal!, finish });
+          calls.push({ url, finish });
         }),
     ),
   );
@@ -80,8 +79,8 @@ it('loads both sources independently and lazily, keeps pending reads across clos
   expect(calls).toHaveLength(2);
   await finish(1, { artifacts: [file] });
   expect(
-    within(agent()).getByRole('link', { name: /agent-notes.txt/u }),
-  ).toHaveAttribute('href', '/api/chats/chat-a/artifacts/file-a');
+    within(agent()).getByRole('button', { name: /agent-notes.txt/u }),
+  ).toBeEnabled();
   expect(
     screen.queryByRole('status', { name: 'Loading conversation files' }),
   ).not.toBeInTheDocument();
@@ -130,7 +129,9 @@ it('does not hide successful agent files when the shared response is invalid', a
   expect(within(shared()).getByRole('alert')).toHaveTextContent(
     'Shared files could not be loaded.',
   );
-  expect(within(agent()).getByRole('link')).toBeVisible();
+  expect(
+    within(agent()).getByRole('button', { name: /agent-notes.txt/u }),
+  ).toBeVisible();
   await userEvent.click(
     screen.getByRole('button', { name: 'Retry shared files' }),
   );
@@ -150,23 +151,24 @@ it('preserves both cached sections through a failed refresh while applying indep
   await finish(1, { artifacts: [file] });
   await userEvent.click(screen.getByRole('button', { name: 'Refresh files' }));
   expect(within(shared()).getByText('my-notes.txt')).toBeVisible();
-  expect(within(agent()).getByRole('link')).toBeVisible();
+  expect(
+    within(agent()).getByRole('button', { name: /agent-notes.txt/u }),
+  ).toBeVisible();
   await finish(2, {
     files: [own, { ...own, uploadId: 'new', name: 'new-notes.txt' }],
   });
   await finish(3, { detail: 'Agent is offline.' }, 503);
   expect(within(shared()).getByText('new-notes.txt')).toBeVisible();
-  expect(within(agent()).getByRole('link')).toHaveAttribute(
-    'href',
-    '/api/chats/chat-a/artifacts/file-a',
-  );
+  expect(
+    within(agent()).getByRole('button', { name: /agent-notes.txt/u }),
+  ).toBeEnabled();
   expect(within(agent()).getByRole('alert')).toHaveTextContent(
     'Agent is offline.',
   );
   expect(calls).toHaveLength(4);
 });
 
-it('keeps both cached sections while refreshing and isolates/aborts reads on chat change', async () => {
+it('keeps both cached sections while refreshing and ignores old reads on chat change', async () => {
   const { calls, finish } = fixture();
   const { rerender } = render(<ArtifactCatalog chatId="chat-a" />);
   await userEvent.click(toggle());
@@ -175,19 +177,20 @@ it('keeps both cached sections while refreshing and isolates/aborts reads on cha
   await userEvent.click(screen.getByRole('button', { name: 'Refresh files' }));
   expect(calls).toHaveLength(4);
   expect(within(shared()).getByText('my-notes.txt')).toBeVisible();
-  expect(within(agent()).getByRole('link')).toBeVisible();
+  expect(
+    within(agent()).getByRole('button', { name: /agent-notes.txt/u }),
+  ).toBeVisible();
   expect(
     screen.queryByRole('status', { name: 'Loading conversation files' }),
   ).not.toBeInTheDocument();
   rerender(<ArtifactCatalog chatId="chat-b" />);
-  expect(calls[2]?.signal.aborted).toBe(true);
-  expect(calls[3]?.signal.aborted).toBe(true);
+  // In-flight manager reads may finish; their stale results stay scoped to the previous chat.
   expect(toggle()).toHaveAttribute('aria-expanded', 'false');
   await finish(2, { files: [own] });
   await finish(3, { artifacts: [file] });
   expect(screen.queryByText('my-notes.txt')).not.toBeInTheDocument();
   expect(
-    screen.queryByRole('link', { name: /agent-notes.txt/u }),
+    screen.queryByRole('button', { name: /agent-notes.txt/u }),
   ).not.toBeInTheDocument();
   await userEvent.click(toggle());
   expect(calls.slice(4).map((call) => call.url)).toEqual([
@@ -253,7 +256,9 @@ it('refreshes accepted sends and completion while open, ignores streaming text a
   expect(calls).toHaveLength(8);
   await finish(6, { files: [own] });
   await finish(7, { artifacts: [file] });
-  expect(within(agent()).getByRole('link')).toBeVisible();
+  expect(
+    within(agent()).getByRole('button', { name: /agent-notes.txt/u }),
+  ).toBeVisible();
 });
 
 it('defers dirty pending reads until reopening and makes no closed-panel background requests', async () => {

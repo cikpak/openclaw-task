@@ -50,7 +50,20 @@ export function recentMessages(
         viewport.lineHeight +
       48;
     height += (message.attachments?.length ?? 0) * 64;
-    if (height >= viewport.height * 2) break;
+    if (height >= viewport.height * 2) {
+      // One native record can project to multiple public messages. Keep that boundary group whole.
+      const sequence = message.historySequence;
+      while (
+        sequence !== undefined &&
+        index > 0 &&
+        messages[index - 1]?.historySequence === sequence
+      ) {
+        index -= 1;
+        if (messages[index]!.role !== 'tool')
+          selected.unshift(messages[index]!);
+      }
+      break;
+    }
   }
   return selected;
 }

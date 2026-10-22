@@ -1,3 +1,4 @@
+import { filesRoute } from './files.mjs';
 import { createServer } from 'node:http';
 import { getHeapStatistics } from 'node:v8';
 import { createHash, timingSafeEqual } from 'node:crypto';
@@ -32,6 +33,18 @@ export async function serve(bootId, jobs, status) {
     try {
       if (request.method === 'GET' && request.url === '/health')
         return send(response, 200, status());
+      if (request.method === 'POST' && request.url?.startsWith('/files/')) {
+        if (
+          request.url === '/files/handoff' &&
+          status().gatewayState !== 'running'
+        )
+          return send(response, 409, {
+            error: 'File handoff requires a usable engine',
+          });
+        const result = await filesRoute(request, response, await body(request));
+        if (result?.streamed) return;
+        if (result) return send(response, 200, result.value);
+      }
       const match = /^\/jobs\/([A-Za-z0-9_-]{1,80})(\/cancel)?$/.exec(
         request.url ?? '',
       );

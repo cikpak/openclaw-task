@@ -72,7 +72,9 @@ export function ModelControls({
   if (!thinkingOptions.some((level) => level.value === value.thinkingLevel))
     thinkingOptions.unshift({
       value: value.thinkingLevel,
-      label: `${value.thinkingLevel} · no longer supported`,
+      label: value.thinkingLevel
+        ? `${value.thinkingLevel} · no longer supported`
+        : 'Choose thinking level',
       disabled: true,
     });
   const speedOptions: SelectOption[] = [
