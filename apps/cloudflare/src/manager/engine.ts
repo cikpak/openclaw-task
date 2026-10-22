@@ -12,7 +12,7 @@ import type { BrowserBoundary } from '../files/boundary.js';
 import { EngineFiles } from '../engine/files/service.js';
 import { UploadMedia } from '../files/uploads/media.js';
 import { pruneCachedSnapshot } from './cached-window.js';
-import { managerSecrets } from '../files/secrets.js';
+import { containerFileSecrets } from '../files/secrets.js';
 
 /** Engine work belongs to the manager, independently of browser sessions. */
 export function createManagerEngine(
@@ -49,7 +49,7 @@ export function createManagerEngine(
           sequence: 0,
         });
     },
-    secrets: () => managerSecrets(context),
+    secrets: () => containerFileSecrets(context),
     mapping: (sessionKey) => {
       const chat = context.store
         .listChats()

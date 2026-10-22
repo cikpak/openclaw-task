@@ -191,8 +191,8 @@ p=pathlib.Path('/recovery/workspace/documents/credential.txt');p.write_text('a'*
     '700:root',
   );
   const inputPath = `/recovery/workspace/documents/.messenger-inputs/${createHash('sha256').update(scope.sessionKey).digest('hex')}/input123/sample.txt`;
-  const privateR2Credential =
-    'private-r2-secret-' + randomBytes(32).toString('hex');
+  const issuedDeviceCredential =
+    'issued-native-device-token-' + randomBytes(32).toString('hex');
   docker([
     'exec',
     name,
@@ -206,7 +206,7 @@ p=pathlib.Path(${JSON.stringify(inputPath)});p.parent.mkdir(parents=True);p.writ
   const inputAudit = await request('/files/input-metadata', {
     ...scope,
     id: 'input123',
-    secrets: [privateR2Credential],
+    secrets: [issuedDeviceCredential],
   });
   assert.equal(inputAudit.status, 200);
   assert.equal(
@@ -218,14 +218,14 @@ p=pathlib.Path(${JSON.stringify(inputPath)});p.parent.mkdir(parents=True);p.writ
     name,
     'python3',
     '-c',
-    `import pathlib;p=pathlib.Path(${JSON.stringify(inputPath)});p.write_text(${JSON.stringify(privateR2Credential)})`,
+    `import pathlib;p=pathlib.Path(${JSON.stringify(inputPath)});p.write_text(${JSON.stringify(issuedDeviceCredential)})`,
   ]);
   assert.equal(
     (
       await request('/files/input-metadata', {
         ...scope,
         id: 'input123',
-        secrets: [privateR2Credential],
+        secrets: [issuedDeviceCredential],
       })
     ).status,
     400,
@@ -235,7 +235,7 @@ p=pathlib.Path(${JSON.stringify(inputPath)});p.parent.mkdir(parents=True);p.writ
       await request('/files/input', {
         ...scope,
         id: 'input123',
-        secrets: [privateR2Credential],
+        secrets: [issuedDeviceCredential],
       })
     ).status,
     400,

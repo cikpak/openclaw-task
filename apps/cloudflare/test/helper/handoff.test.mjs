@@ -22,9 +22,9 @@ assert.ok(path.includes('/documents/.messenger-inputs/'));assert.equal(await rea
 await writeFile(path,'new current input');
 assert.deepEqual(await handoff(data),result);assert.equal(gets,1);assert.equal(await readFile(path,'utf8'),'new current input');
 const input=await openInput({...data,id:'input123'});let text='';for await(const chunk of input.handle.createReadStream({autoClose:false}))text+=chunk;await input.handle.close();assert.equal(text,'new current input');
-const knownR2Secret='private-r2-fixture-'+randomBytes(32).toString('hex');
-await writeFile(path,knownR2Secret);await assert.rejects(()=>inputMetadata({...data,id:'input123',secrets:[knownR2Secret]}));
-await writeFile(path,'new current input');assert.equal((await inputMetadata({...data,id:'input123',secrets:[knownR2Secret]})).digest,createHash('sha256').update('new current input').digest('hex'));
+const knownDeviceToken='native-device-fixture-'+randomBytes(32).toString('hex');
+await writeFile(path,knownDeviceToken);await assert.rejects(()=>inputMetadata({...data,id:'input123',secrets:[knownDeviceToken]}));
+await writeFile(path,'new current input');assert.equal((await inputMetadata({...data,id:'input123',secrets:[knownDeviceToken]})).digest,createHash('sha256').update('new current input').digest('hex'));
 await unlink(path);await assert.rejects(()=>handoff(data));assert.equal(gets,1);
 await assert.rejects(()=>handoff({...data,uploads:[{...data.uploads[0],id:'other',url:'https://evil.test/bucket/staging/uploads/input123/content'}]}));
 await assert.rejects(()=>handoff({...data,uploads:[{...data.uploads[0],id:'other',sha256:'0'.repeat(64)}]}));

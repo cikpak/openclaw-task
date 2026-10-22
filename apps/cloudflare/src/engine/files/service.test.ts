@@ -176,7 +176,7 @@ it('awaits fresh asynchronous private credentials for input metadata audits', as
     expect(JSON.parse(body)).toMatchObject({
       ...mapping,
       id: 'input',
-      secrets: ['fresh-private-r2-credential'],
+      secrets: ['fresh-native-device-token'],
     });
     return Promise.resolve(
       Response.json({
@@ -191,7 +191,7 @@ it('awaits fresh asynchronous private credentials for input metadata audits', as
   const files = new EngineFiles({
     helper,
     mapping: () => mapping,
-    secrets: () => Promise.resolve(['fresh-private-r2-credential']),
+    secrets: () => Promise.resolve(['fresh-native-device-token']),
     catalog: {
       publish: () => Promise.reject(new Error('unused')),
       revoke: () => Promise.resolve(),

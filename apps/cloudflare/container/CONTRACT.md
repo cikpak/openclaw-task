@@ -26,6 +26,8 @@ Capture checks source stability, staging capacity and every SQLite-header databa
 
 File requests remain authenticated on the separate private helper interface:
 
+Optional file-audit `secrets` contain only credentials already available inside this container and the issued native device token. R2 account credentials and the manager private signing key remain inside the Durable Object and must never appear in helper request bodies.
+
 - `POST /files/metadata` with `{agentId,sessionKey,path,secrets?}` returns only audited canonical path/documents root, safe basename/MIME, size/mtime and SHA256. The exact configured owner/session and an opened regular inode are required. Hidden/internal names, escaping symlinks and known credential content are private. Successful location checks alone do not publish; the manager requires explicit successful native write/edit evidence.
 - `POST /files/input-metadata` with `{agentId,sessionKey,id,secrets?}` performs the same credential/inode audit for current handed-off inputs and returns SHA256, size/mtime, private canonical path, basename and MIME. The manager audits inputs before capture and grants asleep delivery only when this digest matches the committed object.
 - `POST /files/read` with that scope streams current eligible bytes. `POST /files/input` with `{agentId,sessionKey,id,secrets?}` resolves a previously handed-off input manifest. Before headers, both pin the verified inode, stream into root-private immutable spool storage, scan known credentials across chunk boundaries and verify no concurrent modification. Later native writes cannot alter an admitted transfer. Cleanup follows stream completion/cancellation. HTTP admission deadlines must end once headers arrive; active bodies use manager-owned reader leases.
