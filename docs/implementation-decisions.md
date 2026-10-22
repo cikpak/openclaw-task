@@ -37,6 +37,7 @@ Short execution decisions recorded while implementing the approved Cloudflare pl
 
 ## Phase 4: files, safe history, and browser integration
 
+- Ordinary file requests need agent-facing publication guidance. Before sending, the native AGENTS.md receives a separate managed deliverables section with hash/missing preconditions and readback. Existing user/behavior bytes and native sessions remain intact. Root-level files stay private; the app does not infer publication from a model claim. Download claims require successfully retrieved content and a successful native write/edit.
 - Application data now travels through authorized manager WebSockets. Authentication, admission tickets, and separately authorized opaque downloads retain HTTP.
 - R2 uploads reserve the existing per-account quota before accepting bounded chunks; acknowledged content and metadata survive manager reconstruction. Accepted attachment references are bound transactionally to their intended chat.
 - Native media handoff uses stable private session files because the pinned protocol only supports inline base64 and cannot carry the approved aggregate size. The exact submission-specific appendix is retained privately and removed from public history. Native image reads were verified in the pinned image.

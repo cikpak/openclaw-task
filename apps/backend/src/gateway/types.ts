@@ -85,6 +85,8 @@ export interface Gateway {
     mapping: GatewayMapping,
     settings: ChatSettings,
   ): Promise<ChatSettings>;
+  /** Native preparation must finish before the service rechecks dispatch ownership. */
+  prepareSend?(mapping: GatewayMapping): Promise<void>;
   send(
     mapping: GatewayMapping,
     submissionId: string,

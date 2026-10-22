@@ -45,6 +45,7 @@ export async function submit(
     const attachments = item.attachments.length
       ? await ctx.media?.payload(item.attachments, chat.settings, mapping(chat))
       : undefined;
+    await ctx.gateway.prepareSend?.(mapping(chat));
     const invocation = await withLock(ctx, id, () => {
       if (ctx.closed) return Promise.resolve(null);
       const pending = owned();
