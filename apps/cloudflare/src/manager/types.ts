@@ -13,6 +13,15 @@ export interface ManagerEnv {
   MANAGERS: DurableObjectNamespace;
   APP_ORIGIN: string;
   MANAGER_ID?: string;
+  ENGINE_IDLE_SECONDS?: string;
+  DEFAULT_MODEL?: string;
+  RECOVERY_BUCKET?: R2Bucket;
+  R2_BUCKET_NAME?: string;
+  R2_ORIGIN?: string;
+  R2_ACCESS_KEY_ID?: string;
+  R2_SECRET_ACCESS_KEY?: string;
+  OPENAI_API_KEY?: string;
+  ANTHROPIC_API_KEY?: string;
 }
 export interface Grant {
   id: string;

@@ -1,0 +1,7 @@
+**/.env*
+**/node_modules
+**/.context
+**/.git
+**/__pycache__
+**/*.pyc
+**/test

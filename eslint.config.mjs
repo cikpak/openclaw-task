@@ -38,7 +38,7 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/dist/**',
       '**/.cloudflare/**',
-      '.context/**',
+      '**/.context/**',
       '.agents/**',
       '.claude/**',
       '.gstack/**',

@@ -96,6 +96,12 @@ importers:
       '@messenger/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@openclaw/gateway-client':
+        specifier: 2026.10.1
+        version: 2026.10.1
+      aws4fetch:
+        specifier: 1.0.20
+        version: 1.0.20
       zod:
         specifier: ^4.1.13
         version: 4.6.6
@@ -1442,6 +1448,9 @@ packages:
 
   avvio@9.3.1:
     resolution: {integrity: sha512-QyTKW61/qlba+cUQBm/sT9X8lri4UdomqSDwCnrnj1IvLVDRRiXRkz4CgBRWB+/cmfC7SK5WQc8T1vSdGvaUcQ==}
+
+  aws4fetch@1.0.20:
+    resolution: {integrity: sha512-/djoAN709iY65ETD6LKCtyyEI04XIBP5xVvfmNxsEP0uJB5tyaGBztSryRr4HqMStr9R06PisQE7m9zDTXKu6g==}
 
   axe-core@4.14.0:
     resolution: {integrity: sha512-9WTZxEjsZ7b13TH8JPmbV2z8CHbl80/2hm3XPEG4JgNdQLK81IBRXmSxHfMAOkSqQeRxT/0dwNDz2GOm3zzpcQ==}
@@ -4601,6 +4610,8 @@ snapshots:
     dependencies:
       '@fastify/error': 4.2.1
       fastq: 1.20.3
+
+  aws4fetch@1.0.20: {}
 
   axe-core@4.14.0: {}
 

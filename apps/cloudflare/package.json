@@ -6,10 +6,13 @@
     "dev": "cf dev",
     "build": "cf build",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --config vitest.config.ts && node --test test/*.test.mjs"
+    "test": "vitest run --config vitest.config.ts && node --test test/*.test.mjs",
+    "test:engine": "node test/helper/docker.mjs && node test/native-gateway.integration.mjs"
   },
   "dependencies": {
     "@messenger/contracts": "workspace:*",
+    "@openclaw/gateway-client": "2026.10.1",
+    "aws4fetch": "1.0.20",
     "zod": "^4.1.13"
   },
   "devDependencies": {

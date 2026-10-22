@@ -8,7 +8,7 @@ test-results/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
-/.context/
+**/.context/
 /.gstack/
 /.codex/
 /.agents/

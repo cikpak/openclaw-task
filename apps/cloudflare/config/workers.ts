@@ -1,5 +1,5 @@
 import process from 'node:process';
-import { bindings, defineWorker, exports } from 'cf/config';
+import { bindings, defineWorker, defineContainer, exports } from 'cf/config';
 
 // Query-bearing admission routes must never enter invocation/access URL logs.
 export const telemetry = {
@@ -33,6 +33,11 @@ export const backend = defineWorker({
     SESSION_TTL_SECONDS: bindings.text('86400'),
   },
 });
+export const engineContainer = defineContainer({
+  name: 'openclaw-messenger-engine',
+  schedulingPolicy: 'durable-object',
+  images: { base: { dockerfile: './container/Dockerfile' } },
+});
 export const manager = defineWorker({
   name: 'openclaw-messenger-manager',
   entrypoint: './src/manager/worker.ts',
@@ -42,7 +47,10 @@ export const manager = defineWorker({
   previewUrls: false,
   observability: telemetry,
   exports: {
-    ConversationManager: exports.durableObject({ storage: 'sqlite' }),
+    ConversationManager: exports.durableObject({
+      storage: 'sqlite',
+      container: engineContainer,
+    }),
   },
   env: {
     BACKEND: bindings.worker({ worker: 'openclaw-messenger-backend' }),
@@ -55,6 +63,19 @@ export const manager = defineWorker({
         'https://openclaw-messenger.pages.dev',
     ),
     MANAGER_ID: bindings.text('primary'),
+    ENGINE_IDLE_SECONDS: bindings.text('60'),
+    DEFAULT_MODEL: bindings.text(
+      (process as NodeJS.Process).env.DEFAULT_MODEL ?? 'openai/gpt-5',
+    ),
+    RECOVERY_BUCKET: bindings.r2({ name: 'openclaw-messenger-production' }),
+    R2_BUCKET_NAME: bindings.text('openclaw-messenger-production'),
+    R2_ORIGIN: bindings.text(
+      'https://65cabd080cdf7a36f76d0e884752c249.r2.cloudflarestorage.com',
+    ),
+    R2_ACCESS_KEY_ID: bindings.secret(),
+    R2_SECRET_ACCESS_KEY: bindings.secret(),
+    OPENAI_API_KEY: bindings.secret(),
+    ANTHROPIC_API_KEY: bindings.secret(),
   },
 });
 export const facade = defineWorker({

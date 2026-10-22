@@ -71,7 +71,7 @@ function section(behavior: AgentBehavior): string {
 function malformed(): never {
   throw new ConflictError(
     'AGENT_INSTRUCTIONS_CONFLICT',
-    'The managed agent instructions changed outside Settings. Restore or review AGENTS.md before trying again.',
+    'The managed agent instructions changed outside Settings. Restore or review the agent settings before trying again.',
   );
 }
 /** Metadata is length-delimited, so arbitrary user text cannot escape its managed section. */

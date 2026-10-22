@@ -1,7 +1,8 @@
 import { defineConfig } from 'cf/config';
-import { backend, facade, manager } from './config/workers.ts';
+import { backend, facade, manager, engineContainer } from './config/workers.ts';
 
 export default defineConfig(({ mode }) => ({
+  containers: mode === 'manager' ? [engineContainer] : [],
   accountId: '65cabd080cdf7a36f76d0e884752c249',
   worker:
     mode === 'backend-bootstrap'
