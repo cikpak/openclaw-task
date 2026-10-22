@@ -13,6 +13,45 @@ const file = {
   category: 'deliverable' as const,
   updatedAt: 1,
 };
+it('downloads a bare prose publication reference without rewriting URLs or code examples', async () => {
+  const dispatch = vi
+    .fn()
+    .mockResolvedValue({
+      file,
+      download: {
+        url: `/downloads/${'d'.repeat(64)}`,
+        expiresAt: Date.now() + 60000,
+      },
+    });
+  registerApplicationDispatcher(dispatch);
+  const click = vi
+    .spyOn(HTMLAnchorElement.prototype, 'click')
+    .mockImplementation(() => undefined);
+  const { container } = render(
+    <AgentMessageContent
+      chatId="chat-a"
+      text={
+        'Downloaded README: file:opaque-document.\n\n```\nfile:opaque-document\n```\n\n[Example file:opaque-document](https://example.com/file:opaque-document)\n\n`example file:opaque-document` not-file:opaque-document file:' +
+        'x'.repeat(129)
+      }
+    />,
+  );
+  expect(screen.getAllByRole('button')).toHaveLength(1);
+  expect(container.querySelector('pre code')).toHaveTextContent(
+    'file:opaque-document',
+  );
+  expect(
+    screen.getByRole('link', { name: 'Example file:opaque-document' }),
+  ).toHaveAttribute('href', 'https://example.com/file:opaque-document');
+  await userEvent.click(screen.getByRole('button', { name: 'Download file' }));
+  expect(dispatch).toHaveBeenCalledWith({
+    type: 'files.resolve',
+    commandId: expect.any(String) as string,
+    chatId: 'chat-a',
+    fileId: 'opaque-document',
+  });
+  await waitFor(() => expect(click).toHaveBeenCalledOnce());
+});
 it('downloads an exact inline-code publication reference and leaves fenced code and other literals inert', async () => {
   const dispatch = vi.fn().mockResolvedValue({
     file,

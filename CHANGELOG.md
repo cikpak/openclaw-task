@@ -7,7 +7,7 @@
 - Enlarge generated-file cards and download icons, align name and size in one
   row, and truncate long filenames without changing the original download name.
 - Resolve published file references with native line/column citations and render
-  inline-code references as authenticated downloads, keeping private paths hidden.
+  code and prose references as authenticated downloads, keeping private paths hidden.
 - Include durable file-sharing guidance with each native message so existing and
   new agents save deliverables in `documents/`. Keep preparation before the Stop
   fence and hide the exact private context from public history.

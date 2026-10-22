@@ -2,13 +2,14 @@ import { memo } from 'react';
 import Markdown, { defaultUrlTransform, type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import styles from './Conversation.module.css';
+import { remarkFileReferences } from './file-reference-markdown';
 import {
   AgentFileChat,
   AgentFileLink,
   isAgentFileReference,
 } from '../attachments/AgentFileLink';
 
-const plugins = [remarkGfm];
+const plugins = [remarkGfm, remarkFileReferences];
 const safeUrl = (url: string) =>
   isAgentFileReference(url)
     ? url
