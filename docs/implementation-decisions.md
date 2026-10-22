@@ -158,3 +158,10 @@ Validation includes actual Workers/D1/R2 upload and download admission, delayed 
   sixty seconds for those classified test-only responses, keeping the fifteen
   second command timeout, all permanent errors and final absence checks unchanged.
   Regression coverage includes success at 30.25 seconds and failure at sixty.
+
+- The 0301cbe PR browser run observed a 44px notification button as
+  43.99999237060547px; its trace retained the existing 44px minimum CSS target.
+  Allow only 0.0001 CSSpx of geometry measurement noise in the test helper.
+  Visibility, a non-null box and the 44px width/height requirement remain; actual
+  Chromium regressions prove 43.99px and 43px controls still fail. This changes
+  test precision only, with no production CSS or application change.

@@ -58,8 +58,16 @@ export async function mobileTarget(page: Page, target: Locator) {
     box,
     'An interactive mobile control must have a rendered target',
   ).not.toBeNull();
-  expect(box?.width ?? 0, 'Mobile target width').toBeGreaterThanOrEqual(44);
-  expect(box?.height ?? 0, 'Mobile target height').toBeGreaterThanOrEqual(44);
+  // Chromium's float32 box coordinates can undershoot exact CSS sizes by micro-pixels.
+  const measurementEpsilon = 0.0001;
+  expect(
+    (box?.width ?? 0) + measurementEpsilon,
+    'Mobile target width',
+  ).toBeGreaterThanOrEqual(44);
+  expect(
+    (box?.height ?? 0) + measurementEpsilon,
+    'Mobile target height',
+  ).toBeGreaterThanOrEqual(44);
 }
 
 export async function readableField(field: Locator) {

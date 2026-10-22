@@ -67,6 +67,22 @@ responses, with a 30.25-second success regression and persistent-at-sixty failur
 regression. All seventy-four focused acceptance-unit tests pass; command timeouts,
 unknown failures and final absence/port/baseline proofs remain unchanged.
 
+At `0301cbe`, both source/native jobs passed (1,093 core tests and all ten
+native checks), and the push aggregate passed all thirty application journeys,
+two existing skips, lifecycle, capacity and strict sixty-second cleanup. The PR
+cleanup also passed, but its mobile notification-target assertion compared 44px
+with 43.99999237060547px. It stopped at twenty-four passed cases, one existing skip
+and six not run; capacity was not reached. The saved trace confirms 44px minimum
+CSS, so this is a test-coordinate precision failure rather than changed layout.
+
+A test-only 0.0001 CSSpx allowance now covers that noise while retaining visibility,
+non-null geometry and the 44px target requirement. Six actual Chromium static-page
+regressions passed independently in both layouts: near-44px noise passes and
+43.99px/43px width and height still fail. Types, scoped lint and formatting passed.
+The full browser inventory is now thirty application journeys plus these six
+precision regressions, with the same two existing skips. Production application,
+helper, dependency and deployment files remain identical to the deployed artifact.
+
 ## Historical phase and deployment evidence
 
 Earlier failed attempts and phase results below remain historical; their pending
