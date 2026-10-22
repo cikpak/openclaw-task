@@ -3,6 +3,7 @@ import { PrivateContainer } from '../src/engine/container.js';
 import { NativeGatewayTransport } from '../src/engine/gateway/transport.js';
 import type { EngineContext } from '../src/manager/types.js';
 import type { AuthStorage } from '../src/engine/gateway/identity.js';
+import { healthFailure, observeHealth } from './acceptance-health.ts';
 type ContextOwner = { context: EngineContext };
 type TransportOwner = { options: { storage: AuthStorage } };
 export interface Timing {
@@ -25,7 +26,16 @@ PrivateContainer.prototype.start = async function (...args) {
 
 const health = Reflect.get(PrivateContainer.prototype, 'health');
 PrivateContainer.prototype.health = async function () {
-  const value = await health.call(this);
+  const storage = (this as unknown as ContextOwner).context.state.storage;
+  observeHealth(storage, 'attempt');
+  let value;
+  try {
+    value = await health.call(this);
+    observeHealth(storage, 'success');
+  } catch (error) {
+    observeHealth(storage, healthFailure(error));
+    throw error;
+  }
   await record(
     (this as unknown as ContextOwner).context.state.storage,
     'helper-ready',

@@ -4,9 +4,9 @@ USER root
 RUN mkdir -p /opt/messenger-helper /recovery /var/lib/messenger-helper && chown node:node /recovery && chmod 0700 /var/lib/messenger-helper
 COPY apps/cloudflare/container/ /opt/messenger-helper/
 RUN node /opt/messenger-helper/native-owner/install.mjs /app
-RUN mv /opt/messenger-helper/configuration.mjs /opt/messenger-helper/configuration.production.mjs
+RUN mv /opt/messenger-helper/configuration.mjs /opt/messenger-helper/configuration.production.mjs && mv /opt/messenger-helper/jobs.mjs /opt/messenger-helper/jobs.production.mjs
 COPY test/acceptance/container/ /opt/messenger-helper/
-ENV HOME=/recovery/home OPENCLAW_HOME=/recovery/home OPENCLAW_STATE_DIR=/recovery/state OPENCLAW_CONFIG_PATH=/recovery/state/openclaw.json OPENCLAW_OAUTH_DIR=/recovery/state/credentials OPENCLAW_WORKSPACE_DIR=/recovery/workspace XDG_CACHE_HOME=/recovery/cache XDG_CONFIG_HOME=/recovery/home/.config XDG_DATA_HOME=/recovery/home/.local/share XDG_STATE_HOME=/recovery/home/.local/state NODE_COMPILE_CACHE=/var/lib/messenger-helper/compile-cache TMPDIR=/recovery/tmp NODE_ENV=test DEFAULT_MODEL=mock/test-model
+ENV HOME=/recovery/home OPENCLAW_HOME=/recovery/home OPENCLAW_STATE_DIR=/recovery/state OPENCLAW_CONFIG_PATH=/recovery/state/openclaw.json OPENCLAW_OAUTH_DIR=/recovery/state/credentials OPENCLAW_WORKSPACE_DIR=/recovery/workspace XDG_CACHE_HOME=/recovery/cache XDG_CONFIG_HOME=/recovery/home/.config XDG_DATA_HOME=/recovery/home/.local/share XDG_STATE_HOME=/recovery/home/.local/state NODE_COMPILE_CACHE=/var/lib/messenger-helper/compile-cache TMPDIR=/recovery/tmp NODE_ENV=test MESSENGER_ACCEPTANCE_FIXTURE=1 DEFAULT_MODEL=mock/test-model
 WORKDIR /opt/messenger-helper
 HEALTHCHECK NONE
 EXPOSE 8787 18789

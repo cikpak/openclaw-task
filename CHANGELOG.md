@@ -11,6 +11,8 @@
   to the original request so replacement messages cannot inherit stale authority.
 - Reject closed or failed verification-socket writes immediately without replaying
   mutations or waiting for an unrelated command timeout.
+- Make the isolated restart fault control validate the exact Gateway process and
+  await native child cleanup within its existing deadline before ordinary restart.
 
 ### Cloudflare migration
 

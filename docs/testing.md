@@ -86,6 +86,15 @@ The runner cleans only its owned disposable containers; ignored local reports an
 private fixtures remain available for diagnosis. Confirm actual command outcomes
 in the release record rather than inferring success from this documented flow.
 
+The restart fault control exists only in the acceptance image. It captures the
+exact helper-spawned Gateway generation, validates identity again immediately
+before crashing its original process group, and lets native IPC cleanup finish
+within the existing 30-second total deadline. It retries only the unchanged
+detached-engine-writer check; restart still requires the authoritative zero-writer
+proof. There are no additional signals to child processes. Production preservation
+retains graceful shutdown. Source/unit clearance is separate from the actual
+active-provider restart and complete browser outcomes.
+
 ## Evidence interpretation
 
 Read [release verification](release-verification.md) for actual phase totals and

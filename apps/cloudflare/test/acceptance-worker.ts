@@ -4,9 +4,11 @@ import { ConversationManager as ProductionManager } from '../src/manager/durable
 import production from '../src/manager/worker.js';
 import { PrivateContainer } from '../src/engine/container.js';
 import type { ManagerEnv } from '../src/manager/types.js';
+import { restartGateway } from './acceptance-restart.js';
 import { receiptProof } from './acceptance-receipt.js';
 import { journalProof } from './acceptance-journal.js';
 import { outcomeProof } from './acceptance-outcome.js';
+import { healthObservations } from './acceptance-health.ts';
 export class ConversationManager extends ProductionManager {
   private readonly construction: number;
   constructor(state: DurableObjectState, env: ManagerEnv) {
@@ -83,6 +85,20 @@ export class ConversationManager extends ProductionManager {
       ).engine;
 
       return Response.json({
+        healthObservations: healthObservations(this.ctx.storage),
+        retryAt: typeof state.retryAt === 'number' ? state.retryAt : null,
+        nextAt: typeof state.nextAt === 'number' ? state.nextAt : null,
+        retryPhase:
+          typeof state.retryPhase === 'string' &&
+          [
+            'waking',
+            'initializing',
+            'restoring',
+            'connecting',
+            'ready',
+          ].includes(state.retryPhase)
+            ? state.retryPhase
+            : null,
         timings: [
           ...(
             await this.ctx.storage.list({
@@ -113,9 +129,7 @@ export class ConversationManager extends ProductionManager {
         state: this.ctx,
         env: this.env,
       } as ConstructorParameters<typeof PrivateContainer>[0]);
-      await control.action('stop');
-      await control.action('start');
-      return Response.json({ ok: true });
+      return restartGateway(control);
     }
     if (path === '/__acceptance/restart-manager' && request.method === 'POST') {
       await this.ctx.storage.setAlarm(Date.now() + 1);
