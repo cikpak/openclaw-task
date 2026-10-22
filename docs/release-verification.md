@@ -1,6 +1,28 @@
 # Release verification
 
-## Current repaired deployment — 2026-10-22
+## Existing-chat file-sharing follow-up — 2026-10-22
+
+Manager runtime source `df1c7d728622677a89cc580d6269ad6a0ac3c952` is deployed
+as version `a5ace540-1cdc-44b1-ac13-7f60db8ee9fc`, with container rollout `none`.
+Backend and Pages runtime are unchanged from the base release below. File sharing
+still requires successful native write/edit evidence and an audited documents
+path; a model claim or root-level file never grants publication.
+
+The Manager now includes stable, private deliverable guidance with each native
+submission, including existing sessions whose initial AGENTS.md snapshot is frozen.
+Preparation completes before the final Stop/ownership fence. Public pending text
+and native receipt IDs remain unchanged; public history strips only the exact
+persisted context for its original session and submission. Legacy attachment
+records retain their original bytes and metadata.
+
+The first AGENTS.md-only attempt failed the real existing-chat browser flow and
+was replaced. Source checks passed 455 backend tests and all 184 Cloudflare tests,
+both package typechecks, lint and formatting; independent focused review passed.
+These source checks do not substitute for the live browser download evidence,
+recorded separately in the workspace `.context/files-browser-investigation.md`.
+Final branch-head CI remains visible on [PR 1](https://github.com/cikpak/openclaw-task/pull/1).
+
+## Base repaired deployment and full-cycle evidence — 2026-10-22
 
 The manual immutable production revision
 `a65dc7f125827904d442620fcb9cde01e13ce56a` is live at

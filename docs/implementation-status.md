@@ -2,12 +2,18 @@
 
 ## Cloudflare implementation — 2026-10-22
 
-All five implementation phases are committed. The repaired immutable production
+All five implementation phases are committed. The base repaired immutable production
 revision `a65dc7f125827904d442620fcb9cde01e13ce56a` is available at
 <https://openclaw-messenger.pages.dev>. Actual GPT-5 tool execution created a file;
 its exact bytes downloaded with zero active engine instances. A later send
 restored the same conversation, original memory, file and effective settings;
 the saved native transcript independently confirms a successful read tool call.
+
+A later Manager file-sharing fix at `df1c7d728622677a89cc580d6269ad6a0ac3c952`
+adds durable per-turn guidance for existing native sessions, while preserving
+publication boundaries, Stop and original public messages. The first AGENTS-only
+attempt failed the live existing-chat flow; the replacement and its separate
+browser evidence are described in the [release record](release-verification.md).
 
 Full local and CI application stages passed, including thirty desktop/mobile
 browser cases, recovery, Stop, restart and ten-agent capacity. Their original
