@@ -23,6 +23,7 @@ export interface JobStatus {
 }
 /** Every helper request must return promptly; status is polled by durable alarms. */
 export interface LifecycleDriver {
+  onFailure?(phase: LifecyclePhase, error: unknown): void;
   inspect(): Promise<{ running: boolean; bootId?: string }>;
   attach(): Promise<void>;
   start(bootId: string): Promise<void>;

@@ -1,3 +1,4 @@
+import { WakeDiagnostics } from './wake-diagnostics.js';
 import type { EngineContext } from '../manager/types.js';
 
 export interface ExpectedIdentity {
@@ -21,6 +22,7 @@ export interface HelperJob {
   result?: unknown;
 }
 export class PrivateContainer {
+  readonly diagnostics = new WakeDiagnostics();
   private monitoring = false;
   private intentional = false;
   private credentials: { helper: string; gateway: string };
@@ -60,12 +62,17 @@ export class PrivateContainer {
     if (!container) throw new Error('Private engine binding unavailable');
     return container;
   }
-  async inspect(): Promise<{ running: boolean; bootId?: string }> {
-    if (!this.container.running) return { running: false };
-    const health = await this.health();
-    return { running: true, bootId: health.bootId };
+  inspect(): Promise<{ running: boolean; bootId?: string }> {
+    return this.diagnostics.run('inspect', async () => {
+      if (!this.container.running) return { running: false };
+      const health = await this.health();
+      return { running: true, bootId: health.bootId };
+    });
   }
-  async attach(): Promise<void> {
+  attach(): Promise<void> {
+    return this.diagnostics.run('attach', () => this.attachContainer());
+  }
+  private async attachContainer(): Promise<void> {
     if (!this.container.running) return;
     // The durable 20-second lifecycle alarm refreshes this watchdog. Never use
     // engine inactivity as the platform stop timer: preservation owns shutdown.
@@ -93,26 +100,28 @@ export class PrivateContainer {
     if (this.container.running) return;
     const credentials = this.credentials;
     const env = this.context.env;
-    this.container.start({
-      image: this.container.images.base!,
-      instance: 'standard-2',
-      enableInternet: true,
-      env: {
-        HELPER_TOKEN: credentials.helper,
-        GATEWAY_TOKEN: credentials.gateway,
-        BOOT_ID: bootId,
-        EXPECTED_MANAGER_DEVICE_ID: expected.deviceId,
-        EXPECTED_MANAGER_PUBLIC_KEY: expected.publicKey,
-        DEFAULT_MODEL: env.DEFAULT_MODEL ?? 'openai/gpt-5',
-        R2_ORIGIN: env.R2_ORIGIN ?? '',
-        ...(env.LOCAL_R2_EMULATOR === '1' ? { LOCAL_R2_EMULATOR: '1' } : {}),
-        ...(restoreExpected ? { RESTORE_EXPECTED: '1' } : {}),
-        ...(env.OPENAI_API_KEY ? { OPENAI_API_KEY: env.OPENAI_API_KEY } : {}),
-        ...(env.ANTHROPIC_API_KEY
-          ? { ANTHROPIC_API_KEY: env.ANTHROPIC_API_KEY }
-          : {}),
-      },
-    });
+    await this.diagnostics.run('start', () =>
+      this.container.start({
+        image: this.container.images.base!,
+        instance: 'standard-2',
+        enableInternet: true,
+        env: {
+          HELPER_TOKEN: credentials.helper,
+          GATEWAY_TOKEN: credentials.gateway,
+          BOOT_ID: bootId,
+          EXPECTED_MANAGER_DEVICE_ID: expected.deviceId,
+          EXPECTED_MANAGER_PUBLIC_KEY: expected.publicKey,
+          DEFAULT_MODEL: env.DEFAULT_MODEL ?? 'openai/gpt-5',
+          R2_ORIGIN: env.R2_ORIGIN ?? '',
+          ...(env.LOCAL_R2_EMULATOR === '1' ? { LOCAL_R2_EMULATOR: '1' } : {}),
+          ...(restoreExpected ? { RESTORE_EXPECTED: '1' } : {}),
+          ...(env.OPENAI_API_KEY ? { OPENAI_API_KEY: env.OPENAI_API_KEY } : {}),
+          ...(env.ANTHROPIC_API_KEY
+            ? { ANTHROPIC_API_KEY: env.ANTHROPIC_API_KEY }
+            : {}),
+        },
+      }),
+    );
     await this.attach();
   }
   async fetch(path: string, init: RequestInit = {}): Promise<Response> {

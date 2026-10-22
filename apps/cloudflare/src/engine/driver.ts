@@ -3,7 +3,11 @@ import type { EngineContext } from '../manager/types.js';
 import type { ChatService } from '../../../backend/src/chats/service.js';
 import type { PrivateContainer } from './container.js';
 import type { NativeGateway } from './gateway/native.js';
-import type { LifecycleDriver, RecoveryCheckpoint } from './lifecycle/types.js';
+import type {
+  LifecycleDriver,
+  LifecyclePhase,
+  RecoveryCheckpoint,
+} from './lifecycle/types.js';
 import { RecoveryJobs } from './recovery/jobs.js';
 import { materializeChats } from './creation.js';
 import { RecoveryObjects } from './recovery/objects.js';
@@ -33,7 +37,11 @@ export class EngineDriver implements LifecycleDriver {
   attach() {
     return this.control.attach();
   }
+  onFailure(phase: LifecyclePhase, error: unknown): void {
+    this.control.diagnostics.failure(phase, error);
+  }
   async start(bootId: string): Promise<void> {
+    this.control.diagnostics.begin(bootId);
     const row = [
       ...this.context.state.storage.sql.exec<{ state: string }>(
         'SELECT state FROM engine_lifecycle WHERE id = 1',
@@ -44,7 +52,9 @@ export class EngineDriver implements LifecycleDriver {
       : undefined;
     await this.control.start(
       bootId,
-      await this.gateway.identity(),
+      await this.control.diagnostics.run('identity', () =>
+        this.gateway.identity(),
+      ),
       state?.initialized === true,
     );
   }

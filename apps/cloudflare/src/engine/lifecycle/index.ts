@@ -205,7 +205,8 @@ export class DurableLifecycle {
         await wakeStep(this);
         if (state.phase === 'ready') this.connected = true;
       } else await sleepStep(this);
-    } catch {
+    } catch (error) {
+      driver.onFailure?.(state.phase, error);
       driver.dispatch?.(false);
       // Save and cancellation failures retain the local disk. Never route them
       // through restore; all outstanding jobs must settle before local restart.
