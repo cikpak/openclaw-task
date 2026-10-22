@@ -6,6 +6,7 @@ import { Icon } from '../ui/Icon';
 import styles from './Attachments.module.css';
 
 export const AgentFileChat = createContext<string | null>(null);
+type FileCard = { name: string; sizeBytes: number };
 
 /** Local model links are file references, not browser routes or trusted URLs. */
 export function isAgentFileReference(href: string): boolean {
@@ -14,14 +15,21 @@ export function isAgentFileReference(href: string): boolean {
 export function AgentFileLink({
   href,
   children,
+  card,
 }: {
   href: string;
   children: ReactNode;
+  card?: FileCard;
 }) {
   const chatId = useContext(AgentFileChat);
   if (!chatId) return <span>{children}</span>;
   return (
-    <FileDownload key={`${chatId}:${href}`} chatId={chatId} href={href}>
+    <FileDownload
+      key={`${chatId}:${href}`}
+      chatId={chatId}
+      href={href}
+      card={card}
+    >
       {children}
     </FileDownload>
   );
@@ -30,10 +38,12 @@ function FileDownload({
   chatId,
   href,
   children,
+  card,
 }: {
   chatId: string;
   href: string;
   children: ReactNode;
+  card?: FileCard | undefined;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -74,21 +84,44 @@ function FileDownload({
     }
   }
   return (
-    <span>
+    <span className={card ? styles.fileCardWrapper : undefined}>
       <button
         type="button"
-        className={styles.fileDownload}
+        className={card ? styles.fileCard : styles.fileDownload}
         disabled={busy}
         aria-busy={busy || undefined}
+        aria-label={
+          card
+            ? `Download ${card.name} (${Math.ceil(card.sizeBytes / 1024)} KB)`
+            : undefined
+        }
+        title={card?.name}
         onClick={() => void download()}
       >
+        {card ? (
+          <>
+            <span className={styles.fileCardName} title={card.name}>
+              {children}
+            </span>
+            <small className={styles.fileCardSize}>
+              {Math.ceil(card.sizeBytes / 1024)} KB
+            </small>
+          </>
+        ) : null}
         <span
-          className={busy ? styles.fileDownloadSpinner : undefined}
+          className={
+            [
+              card ? styles.fileCardIcon : '',
+              busy ? styles.fileDownloadSpinner : '',
+            ]
+              .filter(Boolean)
+              .join(' ') || undefined
+          }
           aria-hidden="true"
         >
           <Icon name={busy ? 'spinner' : 'download'} />
         </span>
-        {children}
+        {card ? null : children}
       </button>
       {error ? (
         <span className={styles.fileDownloadError} role="alert">

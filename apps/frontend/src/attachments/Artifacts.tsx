@@ -15,15 +15,12 @@ export function ArtifactLinks({
   artifacts: Artifact[];
 }) {
   return (
-    <div className={styles.items}>
+    <div className={styles.fileCards}>
       {artifacts.map((artifact) => (
         <AgentFileChat.Provider value={chatId} key={artifact.id}>
-          <span className={styles.item}>
-            <AgentFileLink href={`file:${artifact.id}`}>
-              {artifact.name}
-            </AgentFileLink>{' '}
-            <small>{Math.ceil(artifact.sizeBytes / 1024)} KB</small>
-          </span>
+          <AgentFileLink href={`file:${artifact.id}`} card={artifact}>
+            {artifact.name}
+          </AgentFileLink>
         </AgentFileChat.Provider>
       ))}
     </div>
@@ -115,16 +112,16 @@ function ArtifactPanel({ chatId }: { chatId: string }) {
           >
             <h3>Shared with agent</h3>
             {shared.files?.length ? (
-              <div className={styles.items}>
+              <div className={styles.fileCards}>
                 {shared.files.map((file) => (
-                  <span className={styles.item} key={file.uploadId}>
-                    <AgentFileChat.Provider value={chatId}>
-                      <AgentFileLink href={`file:${file.uploadId}`}>
-                        {file.name}
-                      </AgentFileLink>
-                    </AgentFileChat.Provider>{' '}
-                    <small>{Math.ceil(file.size / 1024)} KB</small>
-                  </span>
+                  <AgentFileChat.Provider value={chatId} key={file.uploadId}>
+                    <AgentFileLink
+                      href={`file:${file.uploadId}`}
+                      card={{ name: file.name, sizeBytes: file.size }}
+                    >
+                      {file.name}
+                    </AgentFileLink>
+                  </AgentFileChat.Provider>
                 ))}
               </div>
             ) : shared.loaded && !shared.error ? (
