@@ -1,4 +1,5 @@
 import { ownedPortClosed } from './cleanup-port.mjs';
+import { cleanupContainers } from './cleanup-containers.mjs';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -20,7 +21,6 @@ export async function cleanupOwnedRuntime(
   const namespace = env.CLOUDFLARE_WORKSPACE_ID;
   assert.match(namespace, /^[a-f0-9]{12}$/u);
   assert.equal(env.ACCEPTANCE_PROJECT, `messenger-acceptance-${namespace}`);
-  const prefix = `workerd-openclaw-local-${namespace}-manager-ConversationManager-`;
   const errors = [];
   const result = {
     namespace,
@@ -30,6 +30,7 @@ export async function cleanupOwnedRuntime(
     preexistingStillRunning: false,
     ownedAbsent: false,
     cleanupFailureSteps: [],
+    dockerObservations: [],
   };
   const failure = (step) => {
     result.cleanupFailureSteps.push(step);
@@ -51,51 +52,10 @@ export async function cleanupOwnedRuntime(
   } catch {
     failure('runner-shutdown');
   }
-  async function list(step) {
-    try {
-      const { stdout } = await run('docker', [
-        'ps',
-        '-aq',
-        '--filter',
-        `name=${prefix}`,
-      ]);
-      return stdout.trim().split(/\s+/u).filter(Boolean);
-    } catch {
-      failure(step);
-      return null;
-    }
-  }
-  async function remove(ids) {
-    for (const id of ids ?? []) {
-      let owned = false;
-      try {
-        const { stdout } = await run('docker', [
-          'inspect',
-          '--format',
-          '{{.Name}}',
-          id,
-        ]);
-        owned = stdout.trim().startsWith(`/${prefix}`);
-        if (!owned) failure('owned-name-mismatch');
-      } catch {
-        failure('owned-inspect');
-      }
-      if (!owned) continue;
-      try {
-        await run('docker', ['rm', '-f', id]);
-        result.removedContainerIds.push(id);
-      } catch {
-        failure('owned-remove');
-      }
-    }
-  }
-  await remove(await list('owned-list'));
-  // A second bounded pass can finish an independent removal after a transient failure.
-  const remaining = await list('owned-recheck');
-  if (remaining?.length) await remove(remaining);
-  const finalOwned = await list('owned-final-verification');
-  result.ownedAbsent = Array.isArray(finalOwned) && finalOwned.length === 0;
-  if (!result.ownedAbsent) failure('owned-still-present-or-unknown');
+  await cleanupContainers(run, namespace, result, failure, {
+    delay: pause,
+    now: effects.now ?? Date.now,
+  });
   for (const origin of [env.ACCEPTANCE_ORIGIN, env.ACCEPTANCE_HARNESS_ORIGIN]) {
     let closed = false;
     for (let attempt = 0; attempt < 20; attempt++) {

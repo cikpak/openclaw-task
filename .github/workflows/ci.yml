@@ -40,5 +40,6 @@ jobs:
             .context/playwright-results
             .context/playwright-report
             .context/resource-evidence.json
+            .context/acceptance-cleanup-final.json
             .context/cloudflare-local-lifecycle-evidence.json
           retention-days: 7
