@@ -24,6 +24,7 @@ import {
   ValidationError,
 } from './errors.js';
 import { verifyPassword } from './auth/password.js';
+import { registerConnectionTickets } from './auth/connection-tickets.js';
 import type { Gateway } from './gateway/types.js';
 import { OpenClawGateway } from './gateway/openclaw.js';
 import { ChatService, summary } from './chats/service.js';
@@ -76,6 +77,8 @@ export async function buildServer(options: ServerOptions) {
       ? {
           redact: {
             paths: [
+              'req.url',
+              'req.query.ticket',
               'req.headers.cookie',
               'req.headers.authorization',
               'req.body',
@@ -114,6 +117,11 @@ export async function buildServer(options: ServerOptions) {
     sessionId(request);
     return Promise.resolve();
   };
+  const consumeConnectionTicket = registerConnectionTickets(
+    app,
+    sessionId,
+    config.origin,
+  );
   app.addHook('onRequest', async (request) => {
     if (
       ['POST', 'PATCH', 'DELETE', 'PUT'].includes(request.method) &&
@@ -520,7 +528,7 @@ export async function buildServer(options: ServerOptions) {
   );
   app.get(
     '/ws/conversation',
-    { websocket: true, preHandler: protectedRoute },
+    { websocket: true, preHandler: [protectedRoute, consumeConnectionTicket] },
     (socket, request) => {
       if (request.headers.origin !== config.origin) {
         socket.close(1008, 'Origin rejected');

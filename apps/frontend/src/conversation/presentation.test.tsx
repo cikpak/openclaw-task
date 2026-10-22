@@ -1,3 +1,4 @@
+import { testConnectionTicket } from '../test/socket';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -18,11 +19,18 @@ beforeEach(() => {
   installTestSocket();
   vi.stubGlobal(
     'fetch',
-    vi.fn(() =>
+    vi.fn((url: string) =>
       Promise.resolve(
-        new Response(JSON.stringify({ authenticated: true }), {
-          headers: { 'Content-Type': 'application/json' },
-        }),
+        new Response(
+          JSON.stringify(
+            url === '/api/connection-tickets'
+              ? testConnectionTicket()
+              : { authenticated: true },
+          ),
+          {
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
       ),
     ),
   );

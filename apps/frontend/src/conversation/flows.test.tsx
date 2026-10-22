@@ -1,3 +1,4 @@
+import { testConnectionTicket } from '../test/socket';
 import { chooseOption } from '../test/select';
 import {
   act,
@@ -52,30 +53,32 @@ beforeEach(() => {
       Promise.resolve(
         new Response(
           JSON.stringify(
-            url === '/api/session'
-              ? { authenticated: true, username: 'owner' }
-              : url === '/api/chats'
-                ? {
-                    chats: [
-                      snapshot.chat,
-                      { ...snapshot.chat, id: 'chat-b', name: 'Writing' },
-                    ],
-                  }
-                : url === '/api/chats/chat-a'
-                  ? snapshot.chat
-                  : url.startsWith('/api/models')
-                    ? { models }
-                    : url.includes('/settings')
-                      ? {
-                          effective: snapshot.chat.settings,
-                          pending: null,
-                          version: 1,
-                        }
-                      : {
-                          version: 1,
-                          busySendBehavior: 'queue',
-                          defaults: snapshot.chat.settings,
-                        },
+            url === '/api/connection-tickets'
+              ? testConnectionTicket()
+              : url === '/api/session'
+                ? { authenticated: true, username: 'owner' }
+                : url === '/api/chats'
+                  ? {
+                      chats: [
+                        snapshot.chat,
+                        { ...snapshot.chat, id: 'chat-b', name: 'Writing' },
+                      ],
+                    }
+                  : url === '/api/chats/chat-a'
+                    ? snapshot.chat
+                    : url.startsWith('/api/models')
+                      ? { models }
+                      : url.includes('/settings')
+                        ? {
+                            effective: snapshot.chat.settings,
+                            pending: null,
+                            version: 1,
+                          }
+                        : {
+                            version: 1,
+                            busySendBehavior: 'queue',
+                            defaults: snapshot.chat.settings,
+                          },
           ),
           {
             status: 200,

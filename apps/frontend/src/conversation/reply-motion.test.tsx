@@ -1,3 +1,4 @@
+import { testConnectionTicket } from '../test/socket';
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 // eslint-disable-next-line no-restricted-imports -- Test-only authored CSS fixture.
@@ -35,11 +36,18 @@ beforeEach(() => {
   installTestSocket();
   vi.stubGlobal(
     'fetch',
-    vi.fn(() =>
+    vi.fn((url: string) =>
       Promise.resolve(
-        new Response(JSON.stringify({ authenticated: true }), {
-          headers: { 'Content-Type': 'application/json' },
-        }),
+        new Response(
+          JSON.stringify(
+            url === '/api/connection-tickets'
+              ? testConnectionTicket()
+              : { authenticated: true },
+          ),
+          {
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
       ),
     ),
   );

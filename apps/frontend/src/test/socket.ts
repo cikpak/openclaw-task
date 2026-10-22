@@ -87,3 +87,11 @@ export function currentSocket() {
   if (!socket) throw new Error('Socket not initialized');
   return socket;
 }
+
+export function testConnectionTicket() {
+  return {
+    ticket: crypto.randomUUID(),
+    address: '/ws/conversation',
+    expiresAt: Date.now() + 60000,
+  };
+}

@@ -1,3 +1,4 @@
+import { testConnectionTicket } from '../test/socket';
 import { chooseOption } from '../test/select';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -29,30 +30,32 @@ function response(data: unknown, etag = '"1"', status = 200) {
 function defaultFetch(url: string) {
   return Promise.resolve(
     response(
-      url === '/api/session'
-        ? { authenticated: true, username: 'owner' }
-        : url === '/api/chats'
-          ? {
-              chats: [
-                snapshot.chat,
-                { ...snapshot.chat, id: 'chat-b', name: 'Writing' },
-              ],
-            }
-          : url === '/api/chats/chat-a'
-            ? snapshot.chat
-            : url.startsWith('/api/models')
-              ? { models }
-              : url.includes('/settings')
-                ? {
-                    effective: snapshot.chat.settings,
-                    pending: null,
-                    version: 1,
-                  }
-                : {
-                    version: 1,
-                    busySendBehavior: 'queue',
-                    defaults: snapshot.chat.settings,
-                  },
+      url === '/api/connection-tickets'
+        ? testConnectionTicket()
+        : url === '/api/session'
+          ? { authenticated: true, username: 'owner' }
+          : url === '/api/chats'
+            ? {
+                chats: [
+                  snapshot.chat,
+                  { ...snapshot.chat, id: 'chat-b', name: 'Writing' },
+                ],
+              }
+            : url === '/api/chats/chat-a'
+              ? snapshot.chat
+              : url.startsWith('/api/models')
+                ? { models }
+                : url.includes('/settings')
+                  ? {
+                      effective: snapshot.chat.settings,
+                      pending: null,
+                      version: 1,
+                    }
+                  : {
+                      version: 1,
+                      busySendBehavior: 'queue',
+                      defaults: snapshot.chat.settings,
+                    },
     ),
   );
 }
@@ -277,7 +280,12 @@ it('keeps mutation and recovery controls blocked after initial settings failure 
     screen.getByRole('button', { name: 'Delete conversation…' }),
   ).toBeEnabled();
   expect(reads).toBe(2);
-  expect(fetch.mock.calls.some(([, options]) => !!options?.method)).toBe(false);
+  expect(
+    fetch.mock.calls.some(
+      ([url, options]) =>
+        url !== '/api/connection-tickets' && !!options?.method,
+    ),
+  ).toBe(false);
 });
 
 it('does not resend a message when the websocket actually reconnects', async () => {

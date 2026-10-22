@@ -15,3 +15,7 @@ test-results/
 /.claude/
 /docs/plans/
 .DS_Store
+
+.cloudflare/
+.dev.vars
+.dev.vars.*

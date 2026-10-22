@@ -1,3 +1,4 @@
+import { testConnectionTicket } from '../test/socket';
 import {
   act,
   fireEvent,
@@ -110,11 +111,17 @@ it('applies the same retained exit to the independent Agent Settings dialog', as
       Promise.resolve(
         new Response(
           JSON.stringify(
-            url.includes('/models')
-              ? { models }
-              : url === '/api/auth/session'
-                ? { authenticated: true, username: 'owner', csrfToken: 'csrf' }
-                : snapshot.chat,
+            url === '/api/connection-tickets'
+              ? testConnectionTicket()
+              : url.includes('/models')
+                ? { models }
+                : url === '/api/auth/session'
+                  ? {
+                      authenticated: true,
+                      username: 'owner',
+                      csrfToken: 'csrf',
+                    }
+                  : snapshot.chat,
           ),
           { headers: { 'Content-Type': 'application/json', ETag: '"1"' } },
         ),

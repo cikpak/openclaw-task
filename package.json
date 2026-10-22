@@ -10,7 +10,7 @@
     "dev": "pnpm --parallel --filter './apps/*' dev",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck && tsc --noEmit",
-    "test": "pnpm -r test && pnpm test:bootstrap",
+    "test": "pnpm -r --workspace-concurrency=1 test && pnpm test:bootstrap",
     "test:bootstrap": "vitest run deploy/*.test.mjs",
     "test:e2e": "playwright test",
     "test:acceptance": "node scripts/acceptance.mjs",
