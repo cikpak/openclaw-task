@@ -180,3 +180,15 @@ Validation includes actual Workers/D1/R2 upload and download admission, delayed 
   auth database, and empty the recovery bucket. Keep the existing application
   resource names, bind the new auth database ID in active configuration, and
   retain historical decisions without rewriting their former resource IDs.
+
+- A newly started container can report running before its helper accepts HTTP.
+  Poll within one durable, bounded 60-second readiness window instead of paying
+  the ordinary 30-second failure retry on every cold wake. Initialization, restore,
+  checkpoint verification and the 60-second idle shutdown policy remain gated as
+  before. Five new lifecycle regressions include manager recreation and expiry.
+- Use two vCPUs with the existing 6144 MiB memory and 12000 MB disk allocation.
+  One sequential local pinned-image comparison reduced native TCP startup from
+  22.912 to 18.554 seconds; production total latency must be measured separately.
+  CPU billing follows active usage. Reject a prewarmed image compile cache: its
+  matched fresh-container pair saved only 1.75 seconds and added about 40 MB of
+  cache entries. Keep the pinned image, provider configuration and user state.

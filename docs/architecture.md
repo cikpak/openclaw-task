@@ -92,7 +92,8 @@ Trust records, manager identity and issued token survive restored boots. The SDK
 is transport/authentication, not an alternative user/session authority.
 
 OpenClaw and SDK are pinned to **2026.10.1**; the image is digest-pinned. Production
-container size is **standard-2: 1 vCPU, 6 GiB memory, 12 GB disk**. Upgrades must
+container size is **custom: 2 vCPU, 6 GiB memory, 12 GB disk**. The extra CPU
+capacity speeds native startup; active CPU usage remains metered. Upgrades must
 revalidate native authentication, pairing, recovery and private full-message
 reader imports against that exact image; npm bundle filenames differ from the
 image despite the same version number.

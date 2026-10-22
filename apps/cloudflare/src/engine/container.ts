@@ -103,7 +103,8 @@ export class PrivateContainer {
     await this.diagnostics.run('start', () =>
       this.container.start({
         image: this.container.images.base!,
-        instance: 'standard-2',
+        // Two CPUs accelerate native bootstrap without increasing RAM or disk.
+        instance: { vcpu: 2, memoryMib: 6144, diskMb: 12000 },
         enableInternet: true,
         env: {
           HELPER_TOKEN: credentials.helper,
