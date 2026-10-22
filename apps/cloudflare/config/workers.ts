@@ -54,10 +54,12 @@ export const manager = defineWorker({
   },
   env: {
     BACKEND: bindings.worker({ worker: 'openclaw-messenger-backend' }),
-    MANAGERS: bindings.durableObject({
-      worker: 'openclaw-messenger-manager',
-      exportName: 'ConversationManager',
-    }),
+    // cf beta.19's typed DO helper always emits script_name, even for self.
+    // The supported raw metadata escape hatch preserves a same-Worker binding.
+    MANAGERS: {
+      type: 'unsafe:durable_object_namespace',
+      class_name: 'ConversationManager',
+    },
     APP_ORIGIN: bindings.text(
       (process as NodeJS.Process).env.APP_ORIGIN ??
         'https://openclaw-messenger.pages.dev',

@@ -109,7 +109,7 @@ explicit artifact directory and mode on every invocation:
 RELEASE_BACKEND_SECRETS_FILE=/private/backend-secrets.json \
   pnpm release:deploy /absolute/path/to/release-artifacts backend-bootstrap
 RELEASE_MANAGER_SECRETS_FILE=/private/manager-secrets.json \
-  pnpm release:deploy /absolute/path/to/release-artifacts manager
+  pnpm release:deploy /absolute/path/to/release-artifacts manager --initial-container
 RELEASE_BACKEND_SECRETS_FILE=/private/backend-secrets.json \
   pnpm release:deploy /absolute/path/to/release-artifacts backend
 pnpm release:deploy /absolute/path/to/release-artifacts pages
@@ -121,6 +121,9 @@ with explicit service bindings, compatible date and dynamic `fail_open=false`.
 Static assets bypass Functions; exact `/api` and unknown nested API routes return
 API errors rather than SPA HTML. Worker `workers.dev` and preview URLs remain
 disabled. Inspect actual deployed bindings/settings, not only local config.
+The manager-only `--initial-container` option uploads/provisions the first engine
+image with immediate rollout. Use it only before an engine exists; omit it on
+subsequent deployments to preserve active engines.
 
 Subsequent releases update compatible Workers before Pages from the same immutable
 bundle. Container rollout is explicitly **`--containers-rollout none`**: code

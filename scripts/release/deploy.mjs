@@ -6,12 +6,15 @@ import { root, run, verify, workerNames } from './common.mjs';
 
 const directory = resolve(process.argv[2] ?? '');
 const selection = process.argv[3];
+const initialContainer = process.argv[4] === '--initial-container';
 if (
   !directory ||
-  !['backend-bootstrap', 'manager', 'backend', 'pages'].includes(selection)
+  !['backend-bootstrap', 'manager', 'backend', 'pages'].includes(selection) ||
+  (process.argv[4] && (!initialContainer || selection !== 'manager')) ||
+  process.argv.length > 5
 )
   throw new Error(
-    'Usage: release:deploy <artifact-directory> <backend-bootstrap|manager|backend|pages>',
+    'Usage: release:deploy <artifact-directory> <backend-bootstrap|manager|backend|pages> [--initial-container (manager only)]',
   );
 const manifest = await verify(directory);
 const env = { ...process.env, CI: 'true' };
@@ -78,7 +81,7 @@ if (selection === 'pages') {
         '--worker',
         workerNames[selection],
         '--containers-rollout',
-        'none',
+        initialContainer ? 'immediate' : 'none',
         '--secrets-file',
         resolve(secretsFile),
       ],
