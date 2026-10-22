@@ -53,6 +53,7 @@ try {
     ['test/helper/docker.mjs'],
     ['test/native-gateway.integration.mjs'],
     ['test/native-followup.integration.mjs'],
+    ['test/native-tool-policy.integration.mjs'],
   ])
     await run(process.execPath, args, env);
   console.info(
@@ -69,6 +70,7 @@ try {
         'native-sdk',
         'native-owner-patch',
         'native-followup',
+        'native-tool-policy',
       ],
     }),
   );

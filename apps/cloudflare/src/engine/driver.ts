@@ -13,6 +13,7 @@ import { materializeChats } from './creation.js';
 import { RecoveryObjects } from './recovery/objects.js';
 import { recoveryObjects, type RecoveryDescriptor } from './recovery/types.js';
 import { assertFileIncarnations } from './recovery/incarnations.js';
+import { ensureDirectToolLoading } from './gateway/tool-policy.js';
 
 export class EngineDriver implements LifecycleDriver {
   readonly objects: RecoveryObjects;
@@ -141,7 +142,9 @@ export class EngineDriver implements LifecycleDriver {
     this.gateway.start();
     try {
       await this.gateway.waitReady(1000);
-      return true;
+      return await ensureDirectToolLoading((method, params) =>
+        this.gateway.request(method, params),
+      );
     } catch {
       return false;
     }

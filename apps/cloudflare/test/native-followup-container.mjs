@@ -1,9 +1,10 @@
-import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { execFile as callback } from 'node:child_process';
 import { promisify } from 'node:util';
 import { until } from './native-followup-fixture.mjs';
 import * as output from './native-followup-output.mjs';
+import { helperFailure } from './native-followup-errors.mjs';
+import { helperJobs } from './native-followup-jobs.mjs';
 const exec = promisify(callback);
 export function containerControl(image, helperToken, gatewayToken, r2Origin) {
   const containers = new Set();
@@ -54,28 +55,10 @@ export function containerControl(image, helperToken, gatewayToken, r2Origin) {
       ...(body ? { body: JSON.stringify(body) } : {}),
       signal: AbortSignal.timeout(15_000),
     });
-    assert.ok(response.ok, `Helper ${path} HTTP ${response.status}`);
+    if (!response.ok) throw await helperFailure(response);
     return response.json();
   };
-  const job = async (action, data = {}) => {
-    let result = await request('/jobs', {
-      action,
-      data,
-      operationId: randomUUID(),
-      bootId,
-    });
-    await until(
-      async () => {
-        if (result.status !== 'running') return true;
-        result = await request(`/jobs/${result.operationId}`);
-        return result.status !== 'running';
-      },
-      action,
-      360_000,
-    );
-    assert.equal(result.status, 'succeeded', `${action}: ${result.status}`);
-    return result.result;
-  };
+  const { job, status: jobStatus } = helperJobs(request, () => bootId);
   const launch = async (identity, restoring = false) => {
     name = `native-followup-${randomUUID().slice(0, 12)}`;
     bootId = randomUUID();
@@ -123,6 +106,7 @@ export function containerControl(image, helperToken, gatewayToken, r2Origin) {
     node,
     request,
     job,
+    jobStatus,
     launch,
     name: () => name,
     origin: () => gatewayOrigin,

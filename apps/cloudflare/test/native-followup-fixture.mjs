@@ -10,6 +10,7 @@ import { build } from 'esbuild';
 import { containerControl } from './native-followup-container.mjs';
 import { providerConfig } from './native-followup-config.mjs';
 import { restoreFixture } from './native-followup-restore.mjs';
+import { bootstrapReady } from './native-followup-readiness.mjs';
 const app = resolve(import.meta.dirname, '..');
 const WebSocket = createRequire(resolve(app, '../backend/package.json'))('ws');
 export async function until(work, label, timeout = 180_000) {
@@ -53,6 +54,11 @@ export async function fixture(providerUrl, recovery) {
     recovery.origin,
   );
   const { node, job, docker } = control;
+  let pairPending = 0,
+    pairDone = 0;
+  let pairing = Promise.resolve(),
+    bootstrap;
+  const pairingStatus = () => ({ pending: pairPending, completed: pairDone });
   const gateway = new NativeGateway({
     storage: {
       get: async (key) => values.get(key),
@@ -63,7 +69,14 @@ export async function fixture(providerUrl, recovery) {
     },
     gatewayToken,
     pair: async (identity) => {
-      await job('pair', { identity });
+      pairPending++;
+      try {
+        pairing = job('pair', { identity });
+        await pairing;
+        pairDone++;
+      } finally {
+        pairPending--;
+      }
     },
     fetcher: () => ({
       fetch: (_url, options) =>
@@ -84,7 +97,12 @@ export async function fixture(providerUrl, recovery) {
   const start = async () => {
     await job('start');
     gateway.start();
-    await gateway.waitReady(240_000);
+    bootstrap = await bootstrapReady(
+      gateway,
+      control,
+      () => pairing,
+      pairingStatus,
+    );
     gateway.dispatch(true);
   };
   const close = async () => {
@@ -116,6 +134,9 @@ export async function fixture(providerUrl, recovery) {
       directory,
       docker,
       name: control.name,
+      pairingStatus,
+      bootstrapStatus: () => bootstrap,
+      jobStatus: control.jobStatus,
       close,
     };
   } catch (error) {
