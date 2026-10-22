@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Cloudflare issue repairs
+
+- Activate the supported direct Codex tool-loading configuration before dispatch,
+  preserving the model, tool permissions and unrelated restored configuration.
+- Retain exact native Stop acknowledgements across delayed history visibility and
+  separately prove cancellation before execution. Scope receipts and history reads
+  to the original request so replacement messages cannot inherit stale authority.
+- Reject closed or failed verification-socket writes immediately without replaying
+  mutations or waiting for an unrelated command timeout.
+
 ### Cloudflare migration
 
 - Keep Pages frontend, Backend/D1 authentication and SQLite manager available

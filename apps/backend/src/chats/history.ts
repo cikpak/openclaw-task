@@ -3,14 +3,27 @@ import type {
   GatewayHistory,
   GatewayMapping,
 } from '../gateway/types.js';
+import type { Store } from '../storage/store.js';
 import { GatewayUnavailableError } from '../errors.js';
 /** The pinned receipt query is limited to fifty IDs; recovery can retain more upstream inputs. */
 export async function historyWithReceipts(
   gateway: Gateway,
   target: GatewayMapping,
   ids: string[],
+  store?: Store,
 ): Promise<GatewayHistory> {
   if (!ids.length) return gateway.history(target);
+  const inputCancellationRequests = store
+    ? ids.flatMap((id) =>
+        (
+          store.db
+            .prepare(
+              'SELECT request_id FROM pending_abort_requests WHERE submission_id=?',
+            )
+            .all(id) as { request_id: string }[]
+        ).map((row) => row.request_id),
+      )
+    : [];
   const receipts = new Map<string, GatewayHistory['receipts'][number]>();
   const journaled = new Set<string>();
   const cancelled = new Set<string>();
@@ -32,6 +45,7 @@ export async function historyWithReceipts(
   if (!latest) throw new Error('Missing bounded history response');
   return {
     ...latest,
+    inputCancellationRequests,
     receipts: [...receipts.values()],
     ...(journaled.size ? { completedInputs: [...journaled] } : {}),
     ...(cancelled.size ? { nativeCancelledInputs: [...cancelled] } : {}),

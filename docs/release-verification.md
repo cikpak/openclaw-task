@@ -119,3 +119,29 @@ baseline exceptions, not a claim that every existing test file is under 300 line
 The existing `ChatSettingsPanel.tsx` is outside the named service/store/adapter
 extraction targets: 493→491 lines, solely removing the condition that hid its
 existing Refresh button. No unrelated component decomposition was added.
+
+## Issue-repair verification in progress
+
+The verification client now rejects closed or failed socket writes immediately
+without mutation replay (five focused cases). The supported Codex direct tool
+configuration passed official SDK activation, exact unrelated-config preservation,
+already-direct no-op and real signed-S3 capture/fresh-helper restore in 76.436
+seconds. Actual public model tool execution remains a separate gate.
+
+The rebuilt helper image
+`sha256:5d4bd019007bcb085e166ecd146a2f0d7af38556bf9981ed8f4a6c163e3c870c`
+passes 48 guarded native-source/installer cases and independent exact verification
+of all seven transformed native modules and both installed helper digests.
+The separate actual production-method immediate-Stop probe passed: 0.906 ms from
+send acknowledgement to Stop, no preflight canonical owner, one exact scoped
+pre-execution certificate persisted before mandatory broad cleanup, and zero
+provider calls. A nonce-sealed native history read cleared the application pending
+row without inventing a USER event or translating an input ID into a generated
+owner. Real Gateway stop/start plus twenty observations over 11.413 seconds showed
+no replay, active work, native pending or application pending, with zero provider
+calls. Owned cleanup and preservation of unrelated containers passed.
+
+Independent focused backend review passes 127 tests, including exact held-history
+replacement/new-nonce refusal. These results do not turn the historical failed
+aggregate or old deployed image into a pass. Restart control, complete current
+acceptance, final-head CI and the public release cycle are still pending.

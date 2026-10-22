@@ -16,6 +16,9 @@ export function initializeStore(db: SqlDatabase): void {
       CREATE TABLE IF NOT EXISTS chat_history (chat_id TEXT PRIMARY KEY REFERENCES chats(id), json TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS submission_scopes (message_id TEXT PRIMARY KEY REFERENCES pending_messages(id) ON DELETE CASCADE, session_id TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS pending_cancellations (message_id TEXT PRIMARY KEY REFERENCES pending_messages(id) ON DELETE CASCADE, revision INTEGER NOT NULL, submission_id TEXT NOT NULL, session_id TEXT NOT NULL, owner_run_id TEXT NOT NULL, confirmed INTEGER NOT NULL DEFAULT 0);
+      CREATE TABLE IF NOT EXISTS pending_abort_requests (message_id TEXT PRIMARY KEY REFERENCES pending_messages(id) ON DELETE CASCADE, request_id TEXT UNIQUE NOT NULL, revision INTEGER NOT NULL, submission_id TEXT NOT NULL, session_id TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS pending_input_cancellations (request_id TEXT PRIMARY KEY REFERENCES pending_abort_requests(request_id) ON DELETE CASCADE, kind TEXT NOT NULL CHECK(kind = 'pre-execution-input-cancelled'), input_id TEXT NOT NULL, session_id TEXT NOT NULL, agent_id TEXT NOT NULL, session_key TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS pending_abort_receipts (request_id TEXT NOT NULL REFERENCES pending_abort_requests(request_id) ON DELETE CASCADE, run_id TEXT NOT NULL, PRIMARY KEY(request_id,run_id));
       CREATE TABLE IF NOT EXISTS creation_commands (id TEXT PRIMARY KEY, chat_id TEXT NOT NULL, json TEXT NOT NULL, deleted INTEGER NOT NULL DEFAULT 0);
       CREATE TABLE IF NOT EXISTS deletion_tombstones (chat_id TEXT PRIMARY KEY, json TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS chat_tools (chat_id TEXT NOT NULL REFERENCES chats(id), id TEXT NOT NULL, sequence INTEGER NOT NULL, json TEXT NOT NULL, PRIMARY KEY(chat_id, id));

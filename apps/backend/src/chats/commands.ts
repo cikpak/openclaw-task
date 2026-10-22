@@ -96,6 +96,7 @@ export async function executeCommand(
           .pending(chat.id)
           .filter((item) => item.state !== 'pending')
           .map((item) => item.submissionId),
+        ctx.store,
       ),
     );
     reconcileInputs(
@@ -130,9 +131,12 @@ export async function executeCommand(
       );
     const history = ctx.projectHistory(
       chat.id,
-      await ctx.gateway.history(mapping(chat), {
-        inputRunIds: [item.submissionId],
-      }),
+      await historyWithReceipts(
+        ctx.gateway,
+        mapping(chat),
+        [item.submissionId],
+        ctx.store,
+      ),
     );
     reconcileInputs(ctx.store, chat.id, history, ctx.locallyUninvoked);
     if (

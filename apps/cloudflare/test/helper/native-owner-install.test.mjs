@@ -91,6 +91,12 @@ test('installer requires a unique insertion and bakes exact before/after/proof h
       assert.equal(module.after, digest(await readFile(module.file)));
     }
     assert.equal(
+      manifest.inputCancellation,
+      digest(
+        await readFile(join(root, 'dist', 'messenger-input-cancellation.mjs')),
+      ),
+    );
+    assert.equal(
       manifest.proof,
       digest(await readFile(join(root, 'dist', 'messenger-owner-proof.mjs'))),
     );

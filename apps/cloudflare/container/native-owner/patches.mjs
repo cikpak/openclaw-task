@@ -1,9 +1,11 @@
+import { inputCancellationPatches } from './input-cancellation-patches.mjs';
 import {
   recorderMethod,
   recorderPersistence,
   followupExecution,
 } from './recorder.mjs';
 export const patches = [
+  ...inputCancellationPatches,
   {
     file: 'agent-runner.runtime-BilVGTOB.mjs',
     sha256: '9dde4b1bd91a2147384ba2ea074c33e28fc7c1f7d30179b4a47250595cc33568',

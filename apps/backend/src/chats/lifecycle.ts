@@ -81,6 +81,7 @@ export async function applySettings(
           ctx.gateway,
           mapping(chat),
           ctx.store.pending(chat.id).map((item) => item.submissionId),
+          ctx.store,
         ),
       );
       reconcileInputs(

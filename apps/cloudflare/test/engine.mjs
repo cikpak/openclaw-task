@@ -49,6 +49,8 @@ try {
       'test/helper/native-owner.test.mjs',
       'test/helper/native-owner-races.test.mjs',
       'test/helper/native-owner-install.test.mjs',
+      'test/helper/input-cancellation.test.mjs',
+      'test/helper/input-cancellation-install.test.mjs',
     ],
     ['test/helper/docker.mjs'],
     ['test/native-gateway.integration.mjs'],

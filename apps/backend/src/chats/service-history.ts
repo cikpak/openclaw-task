@@ -148,6 +148,7 @@ export async function refresh(ctx: ServiceState, id: string): Promise<void> {
     pending(ctx, id)
       .filter((item) => item.state !== 'pending')
       .map((item) => item.submissionId),
+    ctx.store,
   );
   if (epoch !== ctx.connectionEpoch || ctx.closed || !ctx.gateway.ready) return;
   await withLock(ctx, id, () => {

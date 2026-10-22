@@ -6,6 +6,13 @@ import type {
   ToolActivity,
   Attachment,
 } from '@messenger/contracts';
+export interface NativeInputCancellation {
+  kind: 'pre-execution-input-cancelled';
+  inputId: string;
+  sessionId: string;
+  sessionKey: string;
+  agentId: string;
+}
 export interface GatewayMapping {
   agentId: string;
   sessionKey: string;
@@ -21,6 +28,8 @@ export interface GatewayHistory {
   /** Private exact native outcomes; never browser message fields. */
   completedInputs?: string[];
   nativeCancelledInputs?: string[];
+  /** Original app cancellation requests captured before this history read yielded. */
+  inputCancellationRequests?: string[];
   nativeInputOwners?: { inputId: string; runId: string }[];
   receipts: {
     runId: string;
@@ -84,6 +93,10 @@ export interface Gateway {
     attachments?: GatewayAttachment[],
   ): Promise<{ runId: string; status: string }>;
   abort(mapping: GatewayMapping): Promise<void | { abortedRunId: string }>;
+  /** Native chat-controller cancellation. Generic IDs still require exact canonical ownership. */
+  abortChat?(
+    mapping: GatewayMapping,
+  ): Promise<void | { runIds: string[]; inputs: NativeInputCancellation[] }>;
   /** Native-only exact execution selector; broad session cleanup remains separate. */
   abortRun?(
     mapping: GatewayMapping,

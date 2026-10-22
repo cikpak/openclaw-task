@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import type { GatewayContext } from './context.js';
-import type { GatewayMapping, GatewayAttachment } from './types.js';
+import type {
+  GatewayMapping,
+  GatewayAttachment,
+  NativeInputCancellation,
+} from './types.js';
 import { ApplicationError } from '../errors.js';
 export class SendOperations {
   constructor(private readonly context: GatewayContext) {}
@@ -31,6 +35,51 @@ export class SendOperations {
     return z
       .object({ runId: z.string(), status: z.string() })
       .parse(await this.context.request('chat.send', params));
+  }
+  async abortChat(
+    mapping: GatewayMapping,
+  ): Promise<void | { runIds: string[]; inputs: NativeInputCancellation[] }> {
+    const exact = z
+      .string()
+      .min(1)
+      .refine((id) => id === id.trim());
+    const raw = await this.context.request('chat.abort', {
+      sessionKey: mapping.sessionKey,
+      agentId: mapping.agentId,
+    });
+    if (raw && typeof raw === 'object' && Object.hasOwn(raw, 'warning')) return;
+    const parsed = z
+      .object({
+        ok: z.literal(true),
+        aborted: z.literal(true),
+        runIds: z.array(exact).nonempty(),
+        preExecutionInputCancellations: z
+          .array(
+            z.object({
+              kind: z.literal('pre-execution-input-cancelled'),
+              inputId: exact,
+              sessionId: exact,
+              sessionKey: exact,
+              agentId: exact,
+            }),
+          )
+          .optional(),
+      })
+      .safeParse(raw);
+    if (!parsed.success) return;
+    const { runIds, preExecutionInputCancellations: inputs = [] } = parsed.data;
+    if (
+      new Set(runIds).size !== runIds.length ||
+      new Set(inputs.map((input) => input.inputId)).size !== inputs.length ||
+      inputs.some(
+        (input) =>
+          !runIds.includes(input.inputId) ||
+          input.agentId !== mapping.agentId ||
+          input.sessionKey !== mapping.sessionKey,
+      )
+    )
+      return;
+    return { runIds, inputs };
   }
   async abort(
     mapping: GatewayMapping,

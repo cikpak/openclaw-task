@@ -36,7 +36,8 @@ pnpm --filter @messenger/cloudflare test:engine
 
 The unified runner builds the current production helper context, pins its immutable
 image ID and runs isolated Docker/native fixtures without a paid provider: exact
-device approval/token reuse, complete long-message retrieval, writer drain,
+device approval/token reuse, native tool-loading activation and restored no-op,
+complete long-message retrieval, writer drain,
 state/file/ownership restore, native pagination, handoff, PDF extraction and safe
 first-use directory creation. Direct recovery readback verifies all objects,
 including reused objects, corruption/missing/size failures and cancellation, while
@@ -44,7 +45,9 @@ manager tests prohibit recovery-body reads. It
 cannot silently rely on an old phase-specific image tag. Standalone helper scripts
 require explicit `OPENCLAW_TEST_IMAGE`; prefer the unified runner. Production image
 build context excludes test fixtures and synthetic providers. Test-only native
-injection in verification scripts is not a production route.
+injection in verification scripts is not a production route. Guarded owner and
+pre-execution cancellation tests exercise the pinned native source and atomic
+installer refusal; these simulated tests remain distinct from physical SDK probes.
 
 Fresh Cloudflare local harness and browser acceptance commands are documented in
 [operations](operations.md). Use only isolated test state: destructive acceptance

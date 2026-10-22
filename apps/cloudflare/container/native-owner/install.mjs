@@ -31,8 +31,16 @@ export async function install(root) {
     })),
   );
   const proof = await readFile(new URL('./proof.mjs', import.meta.url), 'utf8');
+  const inputCancellation = await readFile(
+    new URL('./input-cancellation.mjs', import.meta.url),
+    'utf8',
+  );
   for (const file of prepared) await writeFile(file.file, file.source);
   await writeFile(join(root, 'dist', 'messenger-owner-proof.mjs'), proof);
+  await writeFile(
+    join(root, 'dist', 'messenger-input-cancellation.mjs'),
+    inputCancellation,
+  );
   const manifest = {
     version: pkg.version,
     modules: prepared.map((file) => ({
@@ -41,6 +49,7 @@ export async function install(root) {
       after: digest(file.source),
     })),
     proof: digest(proof),
+    inputCancellation: digest(inputCancellation),
   };
   await writeFile(
     join(root, 'dist', 'messenger-compatibility.json'),

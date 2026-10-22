@@ -8,8 +8,11 @@ import * as proof from '../../container/native-owner/proof.mjs';
 import { simulatedStorage } from './native-owner-storage.mjs';
 const upstream =
   'ghcr.io/openclaw/openclaw:2026.10.1@sha256:9001e8a880d6ca028b590932b83b9335a26225e86c2a8a7aa9af7c59d6842953';
-export function upstreamSources() {
-  const script = `import{readFileSync}from'node:fs';console.log(JSON.stringify(Object.fromEntries(${JSON.stringify(patches.map((patch) => patch.file))}.map(file=>[file,readFileSync('/app/dist/'+file,'utf8')]))));`;
+export function upstreamSources(extraFiles = []) {
+  const files = [
+    ...new Set([...patches.map((patch) => patch.file), ...extraFiles]),
+  ];
+  const script = `import{readFileSync}from'node:fs';console.log(JSON.stringify(Object.fromEntries(${JSON.stringify(files)}.map(file=>[file,readFileSync('/app/dist/'+file,'utf8')]))));`;
   const sources = JSON.parse(
     execFileSync(
       'docker',

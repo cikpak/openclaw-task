@@ -126,6 +126,9 @@ export class GatewayFacade implements Gateway {
   abort(mapping: GatewayMapping) {
     return this.sendApi.abort(mapping);
   }
+  abortChat(mapping: GatewayMapping) {
+    return this.sendApi.abortChat(mapping);
+  }
   abortRun(mapping: GatewayMapping, runId: string) {
     return this.sendApi.abort(mapping, runId);
   }

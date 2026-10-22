@@ -118,7 +118,7 @@ Validation includes actual Workers/D1/R2 upload and download admission, delayed 
   metadata, never `steerTargetRunId`, text/adjacency inference or `agent.wait`
   admission status. Exact recorder source keys persist at the existing native
   timing; the selected built-in provider cannot run without committed proof.
-  Version/four-module hashes and unique anchors are validated before writes,
+  Version/seven-module hashes and unique anchors are validated before writes,
   with a baked before/after manifest. Native scheduling, admission and commands
   remain unchanged. See [compatibility contract](native-compatibility.md); physical/native/full-acceptance gates remain
   separate from simulated-storage prototype coverage.
@@ -130,3 +130,16 @@ Validation includes actual Workers/D1/R2 upload and download admission, delayed 
   to execution authority, and all original scope/revision/new-work/retry fences
   remain. The strict actual image probe separately verifies durable proof before
   the broad call and pending settlement; full browser/CI release gates still apply.
+
+- Immediate Stop before native USER persistence uses a separate typed scoped
+  pre-execution certificate from the existing official chat abort response.
+  Eligibility retires at native deferred/adopted handoff; execution, queued work,
+  controller replacement and foreign manager admissions cannot qualify. The
+  original nonce/tuple/scope and fresh inactivity/owner checks fence consumption.
+  Generic IDs still require canonical owner equality, and broad cleanup always
+  follows. A null ACK, model text or inactivity alone never proves cancellation.
+- The supported Codex direct dynamic-tool-loading field is activated through a
+  fresh hash-checked native config patch and verified applied revision before
+  dispatch. Tool permissions and model selection remain unchanged. Unapplied
+  configuration stays fenced; no automatic non-CAS plugin reload can apply an
+  unrelated concurrent revision.

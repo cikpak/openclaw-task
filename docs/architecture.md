@@ -131,23 +131,30 @@ the parent run and accepted input UUID. The pinned image applies a guarded
 build-time metadata compatibility patch: exact protected source keys bind that
 owner through native's ordinary persistence timing, and the existing provider
 barrier requires the committed proof. It changes no admission or scheduling
-behavior. All four original module hashes and insertion contexts are checked
+behavior. All seven original module hashes and insertion contexts are checked
 before any write; the image includes a before/after compatibility manifest.
 This private association still requires the later successful causal final above;
 metadata alone does not prove completion. See [native compatibility](native-compatibility.md) for pins and validation limits.
 
 Explicit Stop and cancel-work use a separate cancellation boundary. Before native
 abort, the app durably records the exact pending rows, revisions, submission IDs,
-original native session and confirmed owners. Only a matching authoritative
-`sessions.abort` acknowledgement confirms that intent. Generated followups can
-have different logical input and execution IDs. The app first uses the existing
+original native session and confirmed owners. A matching authoritative
+execution acknowledgement confirms that intent only with fresh canonical owner
+equality. A separate typed pre-execution certificate can confirm the exact
+original input before its canonical USER exists; generic IDs cannot do so.
+Generated followups can have different logical input and execution IDs. The app first uses the existing
 exact-run selector, commits a matching execution ACK before its next await, then
 always retains the original key-only session-wide queue/cascade cleanup. It never
 translates a logical ACK into execution authority. Grouped inputs share one exact
-owner request; target failures cannot skip broad cleanup or erase prior proof.
-Settlement still requires unchanged rows/session, the same fresh canonical owner
-and an inactive owner.
-Lost/no-active acknowledgements, raw native cancellation, reset sessions, remapped
+owner request; target failures cannot skip broad cleanup or erase prior proof. The official
+rich chat abort sits between targeted aborts and broad cleanup. Typed certificates
+are scoped to the original Stop nonce, pending tuple and native session; fresh
+pending/active or contradictory owner evidence still prevents settlement.
+Execution ACK settlement still requires unchanged rows/session, the same fresh
+canonical owner and an inactive owner. Typed settlement additionally seals the
+original request nonce before the history read and permits no canonical USER only
+with the exact pre-execution certificate and fresh inactive, uncontradicted scope.
+Lost/no-active acknowledgements, unscoped native cancellation, reset sessions, remapped
 owners and newly accepted work cannot inherit this authority.
 
 Fresh Steer admission durably saves the effective selected/default behavior and an
