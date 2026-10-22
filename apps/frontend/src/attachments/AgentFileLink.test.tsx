@@ -13,6 +13,42 @@ const file = {
   category: 'deliverable' as const,
   updatedAt: 1,
 };
+it('downloads an exact inline-code publication reference and leaves fenced code and other literals inert', async () => {
+  const dispatch = vi.fn().mockResolvedValue({
+    file,
+    download: {
+      url: `/downloads/${'c'.repeat(64)}`,
+      expiresAt: Date.now() + 60000,
+    },
+  });
+  registerApplicationDispatcher(dispatch);
+  const click = vi
+    .spyOn(HTMLAnchorElement.prototype, 'click')
+    .mockImplementation(function (this: HTMLAnchorElement) {
+      expect(this.download).toBe('review.txt');
+      expect(this.getAttribute('href')).toBe(`/downloads/${'c'.repeat(64)}`);
+    });
+  const { container } = render(
+    <AgentMessageContent
+      chatId="chat-a"
+      text={
+        'Saved `file:opaque-document`.\n\n```\nfile:opaque-document\n```\n\n`documents/private.txt:1` and `example file:opaque-document`'
+      }
+    />,
+  );
+  expect(container.querySelector('pre code')).toHaveTextContent(
+    'file:opaque-document',
+  );
+  expect(screen.getAllByRole('button')).toHaveLength(1);
+  await userEvent.click(screen.getByRole('button', { name: 'Download file' }));
+  expect(dispatch).toHaveBeenCalledWith({
+    type: 'files.resolve',
+    commandId: expect.any(String) as string,
+    chatId: 'chat-a',
+    fileId: 'opaque-document',
+  });
+  await waitFor(() => expect(click).toHaveBeenCalledOnce());
+});
 it('resolves only an opaque file ID over the authenticated manager and navigates to its short lived download', async () => {
   let finish!: (value: {
     file: typeof file;

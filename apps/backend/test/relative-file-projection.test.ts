@@ -67,6 +67,43 @@ it('requires explicit audited aliases and rejects private, unclassified, travers
     ),
   ).not.toContain('file:');
 });
+it('rewrites exact published line citations at every stream split without admitting forged suffixes', () => {
+  for (const path of [
+    file.nativePath,
+    'documents/report.txt',
+    './documents/report.txt',
+  ]) {
+    for (const citation of [':1', ':123:45']) {
+      const input = `Saved \`${path}${citation}\` now`;
+      const expected = 'Saved `file:opaque-a` now';
+      expect(projection().text(input)).toBe(expected);
+      for (let split = 0; split <= input.length; split++) {
+        const stream = new SafeTextStream(projection());
+        expect(
+          stream.push(input.slice(0, split)) +
+            stream.push(input.slice(split)) +
+            stream.finish(),
+        ).toBe(expected);
+      }
+    }
+    for (const suffix of [
+      ':0',
+      ':1:0',
+      ':1:evil',
+      ':1:2:3',
+      ':1/secret',
+      ':1.bak',
+    ])
+      expect(projection().text(`${path}${suffix}`)).not.toContain(
+        'file:opaque-a',
+      );
+  }
+  for (const classification of ['private', 'unclassified'] as const)
+    expect(
+      projection([{ ...file, classification }]).text('documents/report.txt:1'),
+    ).not.toContain('file:');
+  expect(projection().text('documents/private.txt:1')).not.toContain('file:');
+});
 it('does not rewrite public URLs or choose an ambiguous same-name relative reference', () => {
   for (const url of [
     'https://example.test/documents/report.txt',

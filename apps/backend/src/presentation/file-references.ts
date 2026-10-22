@@ -42,7 +42,7 @@ export class FileReferences {
         for (const reference of this.references)
           part = part.replace(
             new RegExp(
-              `(^|[\\s<(\\[{"'=,:\\x60])(?:file:\\/\\/)?${escape(reference.path)}(?=$|[\\s)\\]}>"'\\x60,;!?])`,
+              `(^|[\\s<(\\[{"'=,:\\x60])(?:file:\\/\\/)?${escape(reference.path)}(?::[1-9]\\d*(?::[1-9]\\d*)?)?(?=$|[\\s)\\]}>"'\\x60,;!?])`,
               'gu',
             ),
             (_match, prefix: string) => `${prefix}file:${reference.id}`,

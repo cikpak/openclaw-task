@@ -16,6 +16,15 @@ const safeUrl = (url: string) =>
       ? defaultUrlTransform(url)
       : '';
 const components: Components = {
+  code({ children, className }) {
+    // Fenced code includes a trailing newline; only an exact inline reference
+    // becomes a download. Native paths never reach the resolver.
+    return typeof children === 'string' && isAgentFileReference(children) ? (
+      <AgentFileLink href={children}>Download file</AgentFileLink>
+    ) : (
+      <code className={className}>{children}</code>
+    );
+  },
   a({ href, children, title }) {
     if (href && isAgentFileReference(href))
       return <AgentFileLink href={href}>{children}</AgentFileLink>;
