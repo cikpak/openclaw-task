@@ -35,13 +35,13 @@ export function createRecovery() {
         throw error;
       }
     },
-    async upload({ checkpointId, grants, reuse }, signal) {
+    async upload({ checkpointId, grants, reuse, readbackGrants }, signal) {
       if (!validId(checkpointId)) throw new Error('Invalid checkpoint ID');
       const stage = join(stageRoot, checkpointId),
         descriptor = JSON.parse(
           await readFile(join(stage, 'descriptor.json'), 'utf8'),
         );
-      return upload(stage, descriptor, grants, reuse, signal);
+      return upload(stage, descriptor, grants, reuse, signal, readbackGrants);
     },
     async restore({ descriptor, grants }, signal) {
       objects(descriptor);

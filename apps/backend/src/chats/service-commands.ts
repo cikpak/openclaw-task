@@ -15,6 +15,11 @@ import { schedule, startSteer } from './service-dispatch.js';
 import { projectHistory, snapshot } from './service-history.js';
 import { changed, withLock } from './service-runtime.js';
 import type { ServiceState } from './service-state.js';
+import {
+  claimSubmission,
+  locallyUninvoked,
+  invalidateChatSubmissions,
+} from './submission-claims.js';
 export async function runCommand(
   ctx: ServiceState,
   command: ConversationCommand,
@@ -127,6 +132,9 @@ export function execute(
       streams: ctx.streams,
       snapshot: (id) => snapshot(ctx, id),
       pending: (id) => readPending(ctx, id),
+      claimSubmission: (item) => claimSubmission(ctx, item),
+      locallyUninvoked: (item) => locallyUninvoked(ctx, item),
+      invalidateUninvoked: (id) => invalidateChatSubmissions(ctx, id),
       projectHistory: (id, history) => projectHistory(ctx, id, history),
       preferences: () => preferences(ctx),
       changed: (id, affectsExecution) => changed(ctx, id, affectsExecution),

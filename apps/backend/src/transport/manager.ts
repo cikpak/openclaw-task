@@ -4,7 +4,25 @@ import type {
   ManagerResultData,
 } from '@messenger/contracts';
 import { ApplicationError, ValidationError, toProblem } from '../errors.js';
-import { managerCommandSchema } from './manager-schema.js';
+import {
+  managerCommandIdSchema,
+  managerCommandSchema,
+} from './manager-schema.js';
+
+function failureCommandId(value: unknown): string {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !Object.hasOwn(value, 'commandId')
+  )
+    return 'invalid';
+  const candidate = (value as { commandId?: unknown }).commandId;
+  return typeof candidate === 'string' &&
+    candidate.length === 36 &&
+    managerCommandIdSchema.safeParse(candidate).success
+    ? candidate
+    : 'invalid';
+}
 
 export type ManagerHandlers = {
   [Command in ManagerCommand as Command['type']]: (
@@ -30,7 +48,7 @@ export class ManagerTransport {
     if (!parsed.success)
       return {
         type: 'command.result',
-        commandId: 'invalid',
+        commandId: failureCommandId(value),
         ok: false,
         error: toProblem(new ValidationError(), correlationId),
       };

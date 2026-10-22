@@ -18,6 +18,7 @@ export interface ManagerEnv {
   RECOVERY_BUCKET?: R2Bucket;
   R2_BUCKET_NAME?: string;
   R2_ORIGIN?: string;
+  LOCAL_R2_EMULATOR?: '1';
   R2_ACCESS_KEY_ID?: string;
   R2_SECRET_ACCESS_KEY?: string;
   OPENAI_API_KEY?: string;

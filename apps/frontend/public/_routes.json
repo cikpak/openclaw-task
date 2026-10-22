@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "include": [
+    "/api",
+    "/api/*",
+    "/ws",
+    "/ws/*",
+    "/downloads",
+    "/downloads/*",
+    "/internal",
+    "/internal/*"
+  ],
+  "exclude": []
+}

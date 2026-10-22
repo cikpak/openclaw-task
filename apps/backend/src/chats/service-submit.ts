@@ -4,14 +4,17 @@ import { pending as readPending } from './service-catalog.js';
 import { mapping } from './service-record.js';
 import { changed, retry, withLock } from './service-runtime.js';
 import type { ServiceState } from './service-state.js';
+import { releaseSubmission } from './submission-claims.js';
 export async function submit(
   ctx: ServiceState,
   id: string,
   item: PendingMessage,
   behavior: 'queue' | 'steer',
+  expectedSteerRunId?: string,
 ): Promise<void> {
   if (ctx.closed) return;
-  const epoch = ctx.connectionEpoch;
+  const epoch =
+    ctx.uninvokedSubmissions.get(item.id)?.epoch ?? ctx.connectionEpoch;
   const revision = item.revision;
   const submissionId = item.submissionId;
   const owned = () =>
@@ -26,9 +29,7 @@ export async function submit(
   try {
     const chat = ctx.store.getChat(id);
     if (!ctx.store.submissionScope(item.id)) {
-      const history = await ctx.gateway.history(mapping(chat), {
-        inputRunIds: [item.submissionId],
-      });
+      const history = await ctx.gateway.history(mapping(chat));
       const retained = await withLock(ctx, id, () => {
         if (ctx.closed || !owned()) return Promise.resolve(false);
         if (
@@ -63,7 +64,9 @@ export async function submit(
         operation?.status === 'unknown' ||
         operation?.policy === 'cancel-work' ||
         (behavior === 'queue' && ctx.streams.has(id)) ||
-        (behavior === 'steer' && !ctx.streams.has(id))
+        (behavior === 'steer' && !ctx.streams.has(id)) ||
+        (expectedSteerRunId !== undefined &&
+          ctx.streams.get(id)?.id !== expectedSteerRunId)
       ) {
         // No Gateway invocation occurred: retain durable work for the next valid claim.
         pending.state = 'pending';
@@ -73,6 +76,10 @@ export async function submit(
         return Promise.resolve(null);
       }
       // Invoke under the chat lock, but wrap the ACK promise so the lock never waits on network.
+      releaseSubmission(ctx, item);
+      // A read begun while invocation was still impossible cannot decide its
+      // outcome after the invocation boundary, even if the ACK is outstanding.
+      ctx.stateEpochs.set(id, (ctx.stateEpochs.get(id) ?? 0) + 1);
       invoked = true;
       return Promise.resolve({
         ack: ctx.gateway.send(
@@ -127,5 +134,7 @@ export async function submit(
       return Promise.resolve(true);
     });
     if (!invoked && retained) retry(ctx, id);
+  } finally {
+    releaseSubmission(ctx, item);
   }
 }

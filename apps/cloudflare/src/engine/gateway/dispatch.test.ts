@@ -33,8 +33,30 @@ vi.mock('@openclaw/gateway-client/browser', async (importOriginal) => {
           return Promise.resolve({
             sessionId: 'native-session',
             sessionInfo: { model: 'model', modelProvider: 'provider' },
-            messages: [],
-            inputReceipts: [],
+            messages: [
+              {
+                role: 'user',
+                content: 'Already executing',
+                __openclaw: {
+                  id: 'old-user',
+                  seq: 1,
+                  idempotencyKey: 'old:user',
+                },
+              },
+              {
+                role: 'assistant',
+                content: 'Finished',
+                stopReason: 'stop',
+                __openclaw: { id: 'old-final', seq: 2, runId: 'old' },
+              },
+            ],
+            inputReceipts: [
+              {
+                runId: 'old',
+                state: 'consumed',
+                consumedByEventId: 'old-user',
+              },
+            ],
             hasMore: false,
           });
         if (method === 'agents.files.get')
@@ -120,6 +142,7 @@ it('native terminal events cannot dispatch accepted work across suspension while
   });
   old.state = 'submitted';
   store.savePending(old);
+  store.saveSubmissionScope(old.id, 'native-session');
   gateway.start();
   await vi.waitFor(() => expect(mock.clients).toHaveLength(1));
   const client = mock.clients[0]!;
@@ -148,11 +171,16 @@ it('native terminal events cannot dispatch accepted work across suspension while
     },
   });
   await vi.waitFor(() =>
-    expect(store.pending('chat').map((item) => item.id)).toEqual(['new']),
+    expect(store.pending('chat').find((item) => item.id === 'old')?.state).toBe(
+      'unknown',
+    ),
   );
   await service.drain();
   expect(mock.calls.filter((call) => call.method === 'chat.send')).toEqual([]);
-  expect(store.pending('chat')[0]?.state).toBe('pending');
+  expect(store.pending('chat').map((item) => item.id)).toEqual(['old', 'new']);
+  expect(store.pending('chat').find((item) => item.id === 'new')?.state).toBe(
+    'pending',
+  );
   await gateway.request('gateway.suspend.prepare', {
     requestId: 'attempt',
     drain: true,
@@ -167,6 +195,7 @@ it('native terminal events cannot dispatch accepted work across suspension while
     ).toHaveLength(1),
   );
   await service.drain();
+  expect(store.pending('chat').map((item) => item.id)).toEqual(['new']);
   expect(store.pending('chat')[0]?.state).toBe('submitted');
   expect(
     mock.calls.find((call) => call.method === 'chat.send')?.params,

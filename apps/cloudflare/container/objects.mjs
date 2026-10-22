@@ -1,3 +1,4 @@
+import { validTransferUrl } from './r2-url.mjs';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
@@ -69,18 +70,8 @@ export function grantsFor(grants, expected) {
   for (const grant of grants) {
     if (!grant || !allowed.has(grant.key) || result.has(grant.key))
       throw new Error('Invalid transfer grant');
-    const url = new URL(grant.url);
-    if (
-      url.protocol !== 'https:' ||
-      !process.env.R2_ORIGIN ||
-      url.origin !== process.env.R2_ORIGIN ||
-      url.username ||
-      url.password ||
-      url.hash
-    )
+    if (!validTransferUrl(grant.url, grant.key))
       throw new Error('Unsafe transfer endpoint');
-    if (!decodeURIComponent(url.pathname).endsWith(`/${grant.key}`))
-      throw new Error('Transfer object mismatch');
     if (
       grant.headers !== undefined &&
       (!grant.headers ||

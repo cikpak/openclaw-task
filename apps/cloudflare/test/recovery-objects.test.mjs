@@ -3,11 +3,12 @@ import { test } from 'node:test';
 import { build } from 'esbuild';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 
-test('actual Workers streams and verifies recovery checksums before durable reference commit', async () => {
+test('actual Workers verifies recovery metadata without receiving object bodies before durable reference commit', async () => {
   const bundle = await build({
     stdin: {
       contents: `
       import {DurableObject} from 'cloudflare:workers';
+      import {createHash} from 'node:crypto';
       import {RecoveryObjects} from './src/engine/recovery/objects.ts';
       import {EngineDriver} from './src/engine/driver.ts';
       import {DurableObjectStore} from '../backend/src/storage/durable-object.ts';
@@ -18,10 +19,12 @@ test('actual Workers streams and verifies recovery checksums before durable refe
           const driver = new EngineDriver({store,env:{RECOVERY_BUCKET:this.env.BUCKET}},null,null,null);
           const input = new Uint8Array(5 * 1024 * 1024 + 113).fill(97);
           const sha256 = Buffer.from(await crypto.subtle.digest('SHA-256',input)).toString('hex');
-          const object = key => ({key,size:input.length,sha256,md5:'YWFhYWFhYWFhYWFhYWFhYQ=='});
+          const object = key => ({key,size:input.length,sha256,md5:createHash('md5').update(input).digest('base64')});
           const descriptor = {version:1,checkpointId:'generation-a',archive:object('recovery/generation-a/internal.tar.gz'),manifest:object('recovery/generation-a/manifest.json'),files:[],inventoryDigest:sha256,counts:{entries:1,userFiles:0,databases:0}};
           const checkpoint = {generation:descriptor.checkpointId,manifestKey:descriptor.manifest.key,manifestSha256:sha256,descriptor};
-          const objects = new RecoveryObjects({RECOVERY_BUCKET:this.env.BUCKET});
+          let bodyReads=0;
+          const metadataOnly={head:key=>this.env.BUCKET.head(key),get(){bodyReads++;throw Error('Forbidden manager body read');}};
+          const objects = new RecoveryObjects({RECOVERY_BUCKET:metadataOnly});
           await this.env.BUCKET.put(descriptor.archive.key,input);
           await this.env.BUCKET.put(descriptor.manifest.key,input);
           await objects.verify(checkpoint);
@@ -43,7 +46,7 @@ test('actual Workers streams and verifies recovery checksums before durable refe
           await this.env.BUCKET.delete(descriptor.archive.key);
           let missingRejected=false;
           try { await objects.verify(checkpoint); } catch { missingRejected=true; }
-          return Response.json({current:JSON.parse(row.current).generation,previous:JSON.parse(row.previous).generation,corruptRejected,missingRejected,cancelled});
+          return Response.json({current:JSON.parse(row.current).generation,previous:JSON.parse(row.previous).generation,corruptRejected,missingRejected,cancelled,bodyReads});
         }
       }
       export default { fetch(request,env) {return env.PROBE.getByName('primary').fetch(request);} };`,
@@ -75,6 +78,7 @@ test('actual Workers streams and verifies recovery checksums before durable refe
       corruptRejected: true,
       missingRejected: true,
       cancelled: true,
+      bodyReads: 0,
     });
   } finally {
     await mf.dispose();

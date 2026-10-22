@@ -18,9 +18,10 @@ jobs:
       - run: pnpm format:check
       - run: pnpm test
       - run: pnpm build
+      - run: pnpm --filter @messenger/cloudflare test:engine
   acceptance:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -39,4 +40,5 @@ jobs:
             .context/playwright-results
             .context/playwright-report
             .context/resource-evidence.json
+            .context/cloudflare-local-lifecycle-evidence.json
           retention-days: 7

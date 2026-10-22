@@ -915,7 +915,11 @@ describe('recovery and snapshot race regressions', () => {
       new Error('Transient unavailable'),
     );
     f.gateway.complete(f.target, first.commandId);
-    await vi.waitFor(() => expect(f.gateway.sends).toHaveLength(2));
+    // The existing one-second recovery poll must first confirm the consumed
+    // receipt; a terminal frame alone cannot release accepted successors.
+    await vi.waitFor(() => expect(f.gateway.sends).toHaveLength(2), {
+      timeout: 3000,
+    });
     await vi.waitFor(() => expect(f.service.reconciled).toBe(true), {
       timeout: 3000,
     });

@@ -1,5 +1,6 @@
 import { abortable } from './bounded.js';
-import { hex } from './encoding.js';
+import { recoveryObjectUrl } from './origin.js';
+import { base64 } from './encoding.js';
 import { AwsClient } from 'aws4fetch';
 import type { ManagerEnv } from '../../manager/types.js';
 import {
@@ -54,13 +55,6 @@ export class RecoveryObjects {
       !env.R2_SECRET_ACCESS_KEY
     )
       throw new Error('Private recovery signing unavailable');
-    const origin = new URL(env.R2_ORIGIN);
-    if (
-      origin.protocol !== 'https:' ||
-      !/^[a-f0-9]+\.r2\.cloudflarestorage\.com$/.test(origin.hostname) ||
-      origin.origin !== env.R2_ORIGIN
-    )
-      throw new Error('Invalid private recovery origin');
     const client = new AwsClient({
       accessKeyId: env.R2_ACCESS_KEY_ID,
       secretAccessKey: env.R2_SECRET_ACCESS_KEY,
@@ -70,10 +64,7 @@ export class RecoveryObjects {
     });
     return Promise.all(
       recoveryObjects(descriptor).map(async (object) => {
-        const url = new URL(
-          `/${env.R2_BUCKET_NAME}/${object.key.split('/').map(encodeURIComponent).join('/')}`,
-          origin,
-        );
+        const url = recoveryObjectUrl(env, object.key);
         url.searchParams.set('X-Amz-Expires', '900');
         const headers =
           method === 'PUT'
@@ -108,33 +99,18 @@ export class RecoveryObjects {
     const bucket = this.env.RECOVERY_BUCKET;
     if (!bucket) throw new Error('Recovery bucket unavailable');
     const signal = options.signal ?? AbortSignal.timeout(600_000);
-    // Sequential streams bound memory regardless of archive or private-file size.
+    // Only metadata crosses the manager; authenticated helper jobs verify SHA256.
     for (const expected of recoveryObjects(descriptor)) {
       signal.throwIfAborted();
       if (options.shouldCancel?.()) throw new Error('Preservation cancelled');
-      const remote = await abortable(
-        bucket.get(expected.key),
-        signal,
-        (remote) => {
-          void remote?.body.cancel();
-        },
-      );
+      const remote = await abortable(bucket.head(expected.key), signal);
       if (!remote || remote.size !== expected.size)
         throw new Error('Recovery object missing or incomplete');
-      const digest = new (
-        crypto as Crypto & { DigestStream: typeof DigestStream }
-      ).DigestStream('SHA-256');
-      const guard = new TransformStream<Uint8Array, Uint8Array>({
-        transform(chunk, controller) {
-          signal.throwIfAborted();
-          if (options.shouldCancel?.())
-            throw new Error('Preservation cancelled');
-          controller.enqueue(chunk);
-        },
-      });
-      await remote.body.pipeThrough(guard).pipeTo(digest, { signal });
-      if (hex(await digest.digest) !== expected.sha256)
-        throw new Error('Recovery object checksum mismatch');
+      if (
+        !remote.checksums.md5 ||
+        base64(remote.checksums.md5) !== expected.md5
+      )
+        throw new Error('Recovery object metadata changed');
     }
   }
 }

@@ -17,6 +17,7 @@ import {
 import { mapping } from './service-record.js';
 import { historyWithReceipts } from './history.js';
 import { boundedRun } from './projection.js';
+import { abortAcceptedInputs } from './cancellations.js';
 import { editable, enqueue, requireContent, reconcileInputs } from './queue.js';
 export interface CommandContext {
   store: Store;
@@ -24,6 +25,9 @@ export interface CommandContext {
   streams: Map<string, NonNullable<ChatSnapshot['activeRun']>>;
   snapshot(id: string): Promise<ChatSnapshot>;
   pending(id: string): PendingMessage[];
+  claimSubmission(item: PendingMessage): void;
+  locallyUninvoked?: (item: PendingMessage) => boolean;
+  invalidateUninvoked(chatId: string): void;
   projectHistory(id: string, history: GatewayHistory): GatewayHistory;
   preferences(): Preferences;
   changed(id: string, affectsExecution?: boolean): void;
@@ -81,7 +85,8 @@ export async function executeCommand(
       'Wait for this chat’s settings transition to finish.',
     );
   if (command.type === 'conversation.run.abort') {
-    await ctx.gateway.abort(mapping(chat));
+    ctx.invalidateUninvoked(chat.id);
+    await abortAcceptedInputs(ctx.store, ctx.gateway, chat);
     const history = ctx.projectHistory(
       chat.id,
       await historyWithReceipts(
@@ -93,7 +98,13 @@ export async function executeCommand(
           .map((item) => item.submissionId),
       ),
     );
-    reconcileInputs(ctx.store, chat.id, history);
+    reconcileInputs(
+      ctx.store,
+      chat.id,
+      history,
+      ctx.locallyUninvoked,
+      !ctx.gateway.nativeAbortProofs,
+    );
     if (history.activeRun) {
       const preview = boundedRun(history.activeRun);
       if (preview) ctx.streams.set(chat.id, preview);
@@ -123,7 +134,7 @@ export async function executeCommand(
         inputRunIds: [item.submissionId],
       }),
     );
-    reconcileInputs(ctx.store, chat.id, history);
+    reconcileInputs(ctx.store, chat.id, history, ctx.locallyUninvoked);
     if (
       ctx
         .pending(chat.id)
@@ -168,7 +179,7 @@ export async function executeCommand(
       ctx.streams.has(chat.id) &&
       ctx.gateway.ready
     )
-      item.state = 'submitting';
+      ctx.claimSubmission(item);
     ctx.store.savePending(item);
     ctx.autoTitle(chat.id, item.text);
     ctx.changed(chat.id);
@@ -203,7 +214,7 @@ export async function executeCommand(
         'There is no active run to steer.',
       );
     if (!ctx.gateway.ready) throw new GatewayUnavailableError();
-    item.state = 'submitting';
+    ctx.claimSubmission(item);
     ctx.store.savePending(item);
     ctx.startSteer(chat.id, item);
   }

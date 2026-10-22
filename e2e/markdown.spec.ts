@@ -1,3 +1,4 @@
+import { application } from './manager-client.js';
 import { mkdir } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { cleanChats, createChat, idle, login, send } from './helpers.js';
@@ -10,14 +11,14 @@ test('native streamed assistant Markdown renders readable structure without repl
     /^messenger-acceptance-[a-z0-9-]+$/u,
   );
   await login(page);
-  const response = await page.request.get('/api/models');
+  const response = await application(page).get('/api/models?refresh=true');
   expect(response.status()).toBe(200);
   expect(
     ((await response.json()) as { models: Array<{ id: string }> }).models.some(
       (model) => model.id === 'mock/test-model',
     ),
   ).toBe(true);
-  await cleanChats(page.request);
+  await cleanChats(page);
   await createChat(page, 'Markdown replies');
   await send(
     page,

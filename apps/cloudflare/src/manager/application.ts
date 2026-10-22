@@ -19,6 +19,7 @@ import type { BrowserBoundary } from '../files/boundary.js';
 import { restoreCanonicalCommand } from '../files/canonical.js';
 import { storedAcceptance } from './acceptance.js';
 import { validateCachedCreation } from './creation-validation.js';
+import { readPreferences } from '../../../backend/src/chats/preferences.js';
 
 export class ManagerApplication {
   constructor(
@@ -138,7 +139,14 @@ export class ManagerApplication {
           'chatId' in command ? command.chatId : undefined,
         );
         if (command.type === 'conversation.message.send') {
-          const result = acceptMessage(store, command, attachments);
+          const steer =
+            (command.behavior ?? readPreferences(store).busySendBehavior) ===
+            'steer';
+          const target =
+            steer && engine?.gateway.ready
+              ? engine.service.cachedSnapshot(command.chatId).activeRun?.id
+              : undefined;
+          const result = acceptMessage(store, command, attachments, target);
           this.files?.uploads.commitReferences(
             command,
             command.chatId,

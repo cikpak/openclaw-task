@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>OpenClaw on Cloudflare</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 40px 24px;
+        background: #f5f5f5;
+        color: #2d3142;
+        font-family: 'Geist', system-ui, sans-serif;
+      }
+      .frame {
+        max-width: 1280px;
+        min-width: 0;
+        margin: auto;
+      }
+      .eyebrow {
+        font:
+          500 10px 'Geist Mono',
+          monospace;
+        letter-spacing: 0.16em;
+        color: #4f5d75;
+      }
+      h1 {
+        font:
+          400 28px 'Instrument Serif',
+          Georgia,
+          serif;
+        margin: 12px 0 16px;
+      }
+      .intro,
+      .note {
+        max-width: 860px;
+        font-size: 13px;
+        line-height: 1.6;
+        color: #4f5d75;
+      }
+      .diagram-container {
+        width: 100%;
+        overflow-x: auto;
+      }
+      svg {
+        display: block;
+        width: 100%;
+        min-width: 1280px;
+      }
+      .node-name {
+        font:
+          600 12px 'Geist',
+          system-ui,
+          sans-serif;
+        fill: #2d3142;
+      }
+      .sublabel {
+        font:
+          400 9px 'Geist Mono',
+          monospace;
+        fill: #4f5d75;
+      }
+      .tag,
+      .arrow-label {
+        font:
+          500 8px 'Geist Mono',
+          monospace;
+        letter-spacing: 0.04em;
+        fill: #4f5d75;
+      }
+      @media print {
+        body {
+          padding: 0;
+        }
+        .diagram-container {
+          overflow-x: visible;
+        }
+        svg {
+          min-width: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="frame">
+      <p class="eyebrow">ARCHITECTURE · DEFAULT LIGHT · 22 OCTOBER 2026</p>
+      <h1>OpenClaw on Cloudflare</h1>
+      <p class="intro">
+        Pages, authentication, recent conversations and saved downloads remain
+        available while the engine sleeps. Sending work durably queues it and
+        starts the private engine when needed.
+      </p>
+      <div class="diagram-container">
+        <svg
+          viewBox="0 0 1280 720"
+          xmlns="http://www.w3.org/2000/svg"
+          role="img"
+          aria-labelledby="openclaw-cloudflare-architecture-2026-10-22-title openclaw-cloudflare-architecture-2026-10-22-desc"
+        >
+          <title id="openclaw-cloudflare-architecture-2026-10-22-title">
+            OpenClaw on Cloudflare
+          </title>
+          <desc id="openclaw-cloudflare-architecture-2026-10-22-desc">
+            Pages and the authenticated Durable Object stay available while the
+            private OpenClaw engine sleeps, and the helper preserves recovery
+            data directly in private R2.
+          </desc>
+          <defs>
+            <marker
+              id="arrow"
+              markerWidth="8"
+              markerHeight="6"
+              refX="7"
+              refY="3"
+              orient="auto"
+            >
+              <path d="M0 0 L8 3 L0 6Z" fill="#4f5d75" />
+            </marker>
+            <marker
+              id="arrow-link"
+              markerWidth="8"
+              markerHeight="6"
+              refX="7"
+              refY="3"
+              orient="auto-start-reverse"
+            >
+              <path d="M0 0 L8 3 L0 6Z" fill="#2e5aa8" />
+            </marker>
+          </defs>
+          <rect width="1280" height="720" fill="#f5f5f5" />
+          <rect
+            x="964"
+            y="264"
+            width="268"
+            height="348"
+            rx="8"
+            fill="none"
+            stroke="#4f5d75"
+            stroke-opacity="0.45"
+            stroke-dasharray="5 4"
+          />
+          <text x="980" y="252" class="tag">
+            PRIVATE CONTAINER · STANDARD-2
+          </text>
+          <path
+            d="M244 104 H320"
+            fill="none"
+            stroke="#2e5aa8"
+            stroke-width="1.2"
+            marker-end="url(#arrow-link)"
+          />
+          <rect x="261.5" y="72" width="41" height="18" fill="#f5f5f5" />
+          <text x="282" y="84" class="arrow-label" text-anchor="middle">
+            HTTPS
+          </text>
+          <path
+            d="M520 104 H592"
+            fill="none"
+            stroke="#2e5aa8"
+            stroke-width="1.2"
+            marker-end="url(#arrow-link)"
+          />
+          <rect x="538" y="72" width="36" height="18" fill="#f5f5f5" />
+          <text x="556" y="84" class="arrow-label" text-anchor="middle">
+            AUTH
+          </text>
+          <path
+            d="M804 104 H992"
+            fill="none"
+            stroke="#4f5d75"
+            stroke-width="1.2"
+            marker-end="url(#arrow)"
+          />
+          <rect x="870" y="72" width="56" height="18" fill="#f5f5f5" />
+          <text x="898" y="84" class="arrow-label" text-anchor="middle">
+            SESSIONS
+          </text>
+          <path
+            d="M420 144 V284"
+            fill="none"
+            stroke="#2e5aa8"
+            stroke-width="1.2"
+            marker-end="url(#arrow-link)"
+          />
+          <rect x="436" y="208" width="68" height="18" fill="#f5f5f5" />
+          <text x="470" y="220" class="arrow-label" text-anchor="middle">
+            WS / FILES
+          </text>
+          <path
+            d="M520 340 H592"
+            fill="none"
+            stroke="#4f5d75"
+            stroke-width="1.2"
+            marker-end="url(#arrow)"
+          />
+          <rect x="535.5" y="308" width="41" height="18" fill="#f5f5f5" />
+          <text x="556" y="320" class="arrow-label" text-anchor="middle">
+            ROUTE
+          </text>
+          <path
+            d="M700 284 V144"
+            fill="none"
+            stroke="#4f5d75"
+            stroke-width="1.2"
+            marker-end="url(#arrow)"
+          />
+          <rect x="716" y="208" width="60" height="18" fill="#f5f5f5" />
+          <text x="746" y="220" class="arrow-label" text-anchor="middle">
+            GRANTS
+          </text>
+          <path
+            d="M804 320 H888 Q896 320 896 328 V332 Q896 340 904 340 H992"
+            fill="none"
+            stroke="#2e5aa8"
+            stroke-width="1.2"
+            marker-end="url(#arrow-link)"
+          />
+          <rect x="836.5" y="288" width="31" height="18" fill="#f5f5f5" />
+          <text x="852" y="300" class="arrow-label" text-anchor="middle">
+            SDK
+          </text>
+          <path
+            d="M804 360 H924 Q932 360 932 368 V532 Q932 540 940 540 H992"
+            fill="none"
+            stroke="#4f5d75"
+            stroke-width="1.2"
+            marker-end="url(#arrow)"
+          />
+          <rect x="944" y="448" width="52" height="18" fill="#f5f5f5" />
+          <text x="970" y="460" class="arrow-label" text-anchor="middle">
+            CONTROL
+          </text>
+          <path
+            d="M660 396 V516"
+            fill="none"
+            stroke="#4f5d75"
+            stroke-width="1.2"
+            marker-end="url(#arrow)"
+          />
+          <rect x="676" y="448" width="60" height="18" fill="#f5f5f5" />
+          <text x="706" y="460" class="arrow-label" text-anchor="middle">
+            FILES
+          </text>
+          <path
+            d="M992 572 H804"
+            fill="none"
+            stroke="#2e5aa8"
+            stroke-width="1.2"
+            marker-end="url(#arrow-link)"
+            marker-start="url(#arrow-link)"
+          />
+          <rect x="864" y="540" width="68" height="18" fill="#f5f5f5" />
+          <text x="898" y="552" class="arrow-label" text-anchor="middle">
+            DIRECT R2
+          </text>
+          <path
+            d="M1100 516 V396"
+            fill="none"
+            stroke="#4f5d75"
+            stroke-width="1.2"
+            marker-end="url(#arrow)"
+          />
+          <rect x="1118" y="448" width="64" height="18" fill="#f5f5f5" />
+          <text x="1150" y="460" class="arrow-label" text-anchor="middle">
+            PROCESS
+          </text>
+          <rect x="62" y="62" width="184" height="84" rx="6" fill="#f5f5f5" />
+          <rect
+            x="64"
+            y="64"
+            width="180"
+            height="80"
+            rx="6"
+            fill="#f5f5f5"
+            stroke="#2d3142"
+            stroke-width="1"
+          />
+          <text x="80" y="88" class="tag" fill="#2d3142">USER</text>
+          <text x="80" y="108" class="node-name">Browser</text>
+          <text x="80" y="124" class="sublabel">Chats · queue · files</text>
+          <rect x="318" y="62" width="204" height="84" rx="6" fill="#f5f5f5" />
+          <rect
+            x="320"
+            y="64"
+            width="200"
+            height="80"
+            rx="6"
+            fill="#f5f5f5"
+            stroke="#2d3142"
+            stroke-width="1"
+          />
+          <text x="336" y="88" class="tag" fill="#2d3142">PUBLIC ORIGIN</text>
+          <text x="336" y="108" class="node-name">Cloudflare Pages</text>
+          <text x="336" y="124" class="sublabel">React + thin Functions</text>
+          <rect x="590" y="62" width="216" height="84" rx="6" fill="#f5f5f5" />
+          <rect
+            x="592"
+            y="64"
+            width="212"
+            height="80"
+            rx="6"
+            fill="#f5f5f5"
+            stroke="#2d3142"
+            stroke-width="1"
+          />
+          <text x="608" y="88" class="tag" fill="#2d3142">AUTHORITY</text>
+          <text x="608" y="108" class="node-name">Backend Worker</text>
+          <text x="608" y="124" class="sublabel">
+            Login · sessions · tickets
+          </text>
+          <rect x="990" y="62" width="216" height="100" rx="6" fill="#f5f5f5" />
+          <path
+            d="M992 76 C992 60 1204 60 1204 76 V148 C1204 164 992 164 992 148 Z"
+            fill="#ececec"
+            stroke="#2d3142"
+            stroke-width="1"
+          />
+          <path
+            d="M992 76 C992 92 1204 92 1204 76"
+            fill="none"
+            stroke="#2d3142"
+            stroke-width="1"
+          />
+          <text x="1008" y="100" class="tag" fill="#2d3142">AUTH STORAGE</text>
+          <text x="1008" y="120" class="node-name">D1</text>
+          <text x="1008" y="136" class="sublabel">
+            Session and ticket hashes
+          </text>
+          <rect
+            x="318"
+            y="282"
+            width="204"
+            height="116"
+            rx="6"
+            fill="#f5f5f5"
+          />
+          <rect
+            x="320"
+            y="284"
+            width="200"
+            height="112"
+            rx="6"
+            fill="#f5f5f5"
+            stroke="#2d3142"
+            stroke-width="1"
+          />
+          <text x="336" y="308" class="tag" fill="#2d3142">PRIVATE ROUTER</text>
+          <text x="336" y="328" class="node-name">Manager Worker</text>
+          <text x="336" y="344" class="sublabel">
+            Routes to the assigned DO
+          </text>
+          <text x="336" y="358" class="sublabel">
+            No alternate public entry
+          </text>
+          <rect
+            x="590"
+            y="282"
+            width="216"
+            height="116"
+            rx="6"
+            fill="#f5f5f5"
+          />
+          <rect
+            x="592"
+            y="284"
+            width="212"
+            height="112"
+            rx="6"
+            fill="rgba(191,69,32,0.08)"
+            stroke="#bf4520"
+            stroke-width="1.5"
+          />
+          <text x="608" y="308" class="tag" fill="#bf4520">COORDINATOR</text>
+          <text x="608" y="328" class="node-name">Durable Object</text>
+          <text x="608" y="344" class="sublabel">
+            Durable queue · safe history
+          </text>
+          <text x="608" y="358" class="sublabel">
+            File catalogue · lifecycle
+          </text>
+          <rect
+            x="990"
+            y="282"
+            width="216"
+            height="116"
+            rx="6"
+            fill="#f5f5f5"
+          />
+          <rect
+            x="992"
+            y="284"
+            width="212"
+            height="112"
+            rx="6"
+            fill="#f5f5f5"
+            stroke="#2d3142"
+            stroke-width="1"
+          />
+          <text x="1008" y="308" class="tag" fill="#2d3142">ENGINE</text>
+          <text x="1008" y="328" class="node-name">OpenClaw Gateway</text>
+          <text x="1008" y="344" class="sublabel">
+            Agents and native history
+          </text>
+          <text x="1008" y="358" class="sublabel">
+            Private authenticated SDK
+          </text>
+          <rect x="990" y="514" width="216" height="84" rx="6" fill="#f5f5f5" />
+          <rect
+            x="992"
+            y="516"
+            width="212"
+            height="80"
+            rx="6"
+            fill="#f5f5f5"
+            stroke="#2d3142"
+            stroke-width="1"
+          />
+          <text x="1008" y="540" class="tag" fill="#2d3142">
+            PRIVATE CONTROL
+          </text>
+          <text x="1008" y="560" class="node-name">Supervisor / helper</text>
+          <text x="1008" y="576" class="sublabel">
+            Save · restore · /recovery
+          </text>
+          <rect
+            x="590"
+            y="514"
+            width="216"
+            height="100"
+            rx="6"
+            fill="#f5f5f5"
+          />
+          <path
+            d="M592 528 C592 512 804 512 804 528 V600 C804 616 592 616 592 600 Z"
+            fill="#ececec"
+            stroke="#2d3142"
+            stroke-width="1"
+          />
+          <path
+            d="M592 528 C592 544 804 544 804 528"
+            fill="none"
+            stroke="#2d3142"
+            stroke-width="1"
+          />
+          <text x="608" y="552" class="tag" fill="#2d3142">
+            RECOVERY &amp; FILES
+          </text>
+          <text x="608" y="572" class="node-name">Private R2</text>
+          <text x="608" y="588" class="sublabel">
+            Archive + separate user files
+          </text>
+          <path d="M64 652 H1208" stroke="rgba(45,49,66,0.12)" />
+          <path d="M64 680 H92" stroke="#2e5aa8" stroke-width="1.2" />
+          <text x="104" y="684" class="sublabel">
+            HTTP / WebSocket / direct transfer
+          </text>
+          <path d="M424 680 H452" stroke="#4f5d75" stroke-width="1.2" />
+          <text x="464" y="684" class="sublabel">
+            Private control or storage
+          </text>
+          <rect
+            x="784"
+            y="672"
+            width="12"
+            height="12"
+            fill="rgba(191,69,32,0.08)"
+            stroke="#bf4520"
+          />
+          <text x="808" y="684" class="sublabel">
+            Single prototype coordinator
+          </text>
+        </svg>
+      </div>
+      <p class="note">
+        The SDK runs inside the Durable Object. Gateway and helper ports have no
+        public route. The helper transfers recovery bytes directly to R2;
+        archive bytes do not pass through the Durable Object. This diagram shows
+        the approved topology; release evidence is recorded separately.
+      </p>
+    </main>
+  </body>
+</html>

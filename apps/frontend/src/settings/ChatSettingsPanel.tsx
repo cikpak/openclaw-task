@@ -352,19 +352,17 @@ export function ChatSettingsPanel({
           />
         </div>
         <ErrorNotice message={error} />
-        {error || action === 'refresh' ? (
-          <Button
-            busy={action === 'refresh'}
-            icon="refresh"
-            type="button"
-            disabled={busy || initialRead === 'loading'}
-            onClick={() => {
-              void refreshLatest();
-            }}
-          >
-            Refresh latest values and models, keep my edits
-          </Button>
-        ) : null}
+        <Button
+          busy={action === 'refresh'}
+          icon="refresh"
+          type="button"
+          disabled={busy || initialRead === 'loading'}
+          onClick={() => {
+            void refreshLatest();
+          }}
+        >
+          Refresh latest values and models, keep my edits
+        </Button>
         {refreshNote ? (
           <p role="status" className={styles.status}>
             {refreshNote}

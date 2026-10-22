@@ -13,9 +13,11 @@ export class SafeGatewayProjection {
     string,
     { stream: SafeTextStream; sequence: number }
   >();
-  constructor(private readonly policy: () => ProjectionPolicy) {}
-  history(history: GatewayHistory): GatewayHistory {
-    const projection = new BrowserProjection(this.policy());
+  constructor(
+    private readonly policy: (sessionKey?: string) => ProjectionPolicy,
+  ) {}
+  history(history: GatewayHistory, sessionKey?: string): GatewayHistory {
+    const projection = new BrowserProjection(this.policy(sessionKey));
     return {
       ...history,
       messages: history.messages
@@ -48,14 +50,16 @@ export class SafeGatewayProjection {
     if (entry && event.sequence <= entry.sequence) return null;
     if (!entry || event.replace) {
       entry = {
-        stream: new SafeTextStream(new BrowserProjection(this.policy())),
+        stream: new SafeTextStream(
+          new BrowserProjection(this.policy(event.sessionKey)),
+        ),
         sequence: event.sequence,
       };
       this.streams.set(key, entry);
     }
     entry.sequence = event.sequence;
     // Keep unfinished tokens private while newly verified files become visible mid-run.
-    entry.stream.refresh(new BrowserProjection(this.policy()));
+    entry.stream.refresh(new BrowserProjection(this.policy(event.sessionKey)));
     let text = entry.stream.push(event.text);
     if (['final', 'aborted', 'error'].includes(event.state)) {
       text += entry.stream.finish();

@@ -5,6 +5,7 @@ export class AuthError extends Error {
     readonly status: number,
     readonly code: string,
     message: string,
+    readonly headers?: HeadersInit,
   ) {
     super(message);
   }
@@ -21,8 +22,13 @@ export function json(
   return Response.json(value, { status, headers: safeHeaders });
 }
 
-export function fail(status: number, code: string, message: string): never {
-  throw new AuthError(status, code, message);
+export function fail(
+  status: number,
+  code: string,
+  message: string,
+  headers?: HeadersInit,
+): never {
+  throw new AuthError(status, code, message, headers);
 }
 
 export async function body(request: Request): Promise<Record<string, unknown>> {

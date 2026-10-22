@@ -6,6 +6,7 @@ import { canonicalModel, projectMessage, messageText } from './messages.js';
 import { historySchema } from './protocol-schemas.js';
 import { completeMessages } from './complete-messages.js';
 import { projectTranscriptTools, projectToolEvent } from './tools.js';
+import { completedInputs } from './journal-inputs.js';
 export class HistoryOperations {
   constructor(private readonly context: GatewayContext) {}
   async history(
@@ -63,6 +64,15 @@ export class HistoryOperations {
       throw new ValidationError(
         'The conversation history changed while loading. Try loading earlier messages again.',
       );
+    const journaled = options.inputRunIds?.length
+      ? await completedInputs(
+          this.context,
+          mapping,
+          data,
+          options.inputRunIds,
+          generation,
+        )
+      : { inputs: [], cancelled: [], receipts: [] };
     data.messages = await completeMessages(
       this.context,
       mapping,
@@ -118,7 +128,14 @@ export class HistoryOperations {
           )
           .map((event) => event.tool),
       ].slice(-100),
-      receipts: data.inputReceipts ?? [],
+      receipts: journaled.receipts,
+      ...('owners' in journaled && journaled.owners?.length
+        ? { nativeInputOwners: journaled.owners }
+        : {}),
+      ...(journaled.inputs.length ? { completedInputs: journaled.inputs } : {}),
+      ...(journaled.cancelled.length
+        ? { nativeCancelledInputs: journaled.cancelled }
+        : {}),
     };
   }
 }

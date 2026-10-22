@@ -180,6 +180,7 @@ export class EngineDriver implements LifecycleDriver {
       this.context.state.waitUntil(this.control.attach().catch(() => {}));
     }, 20_000);
     try {
+      await this.jobs.verify(checkpoint);
       await this.objects.verify(checkpoint, {
         signal: AbortSignal.timeout(600_000),
         shouldCancel: () => this.pending() || this.cancellationRequested(),

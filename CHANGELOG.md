@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Cloudflare migration
+
+- Keep Pages frontend, Backend/D1 authentication and SQLite manager available
+  independently of the sleeping OpenClaw container. Application data uses an
+  authorized manager socket; admission and exact-session downloads stay HTTP.
+- Add durable wake/idle preservation, option-B cancellation until final stop,
+  helper-only restored boots, private native SDK identity and direct R2 recovery.
+- Stage uploads without wake; protect live/asleep downloads with one-minute
+  single-use permissions, explicit publication and independent reader pins.
+- Cache whole safe messages by measured viewport and recover complete long native
+  replies without turning display limits into retention policy.
+- Replace active Compose/Caddy/DigitalOcean deployment with an isolated Cloudflare
+  workflow and manual local deployment; CI checks only. Preserve old evidence as
+  historical and update the separate OpenClaw documentation project.
+- Record provider-independent verification separately from the pending real
+  provider release cycle; replacement OpenAI credentials passed private model-list
+  validation, and the original invalid key is not shipped.
+
 ### Latest settings and interaction updates
 
 - Added custom instructions, response style and personality to application

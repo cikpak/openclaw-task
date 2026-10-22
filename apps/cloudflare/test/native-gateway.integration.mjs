@@ -29,8 +29,11 @@ const { NativeGateway } = await import(
 let name = `phase3-gateway-auth-${randomUUID().slice(0, 8)}`;
 let bootId = randomUUID();
 const containerNames = new Set([name]);
-const image =
-  process.env.OPENCLAW_TEST_IMAGE ?? 'messenger-phase3-helper:local';
+const image = process.env.OPENCLAW_TEST_IMAGE;
+if (!image)
+  throw new Error(
+    'Run pnpm test:engine or select OPENCLAW_TEST_IMAGE explicitly',
+  );
 const helperToken = randomBytes(32).toString('hex');
 const gatewayToken = randomBytes(32).toString('hex');
 const values = new Map();
@@ -138,8 +141,6 @@ try {
     name,
     '--env-file',
     envPath,
-    '-v',
-    `${resolve(app, 'container')}:/opt/messenger-helper:ro`,
     '-p',
     '127.0.0.1::8787',
     '-p',

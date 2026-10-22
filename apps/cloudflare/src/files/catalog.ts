@@ -76,8 +76,12 @@ export class FileCatalog {
         this.save({ ...record, deleted: true });
     return Promise.resolve();
   }
-  policy(): ProjectionPolicy {
-    const records = this.all().filter((record) => !record.deleted);
+  policy(sessionKey?: string): ProjectionPolicy {
+    const records = this.all().filter(
+      (record) =>
+        !record.deleted &&
+        (sessionKey === undefined || record.sessionKey === sessionKey),
+    );
     return {
       documentsRoots: [
         ...new Set(records.map((record) => record.documentsRoot)),
@@ -86,6 +90,15 @@ export class FileCatalog {
         nativePath: record.path,
         classification: 'deliverable',
         file: record.file,
+        ...(sessionKey === undefined
+          ? {}
+          : {
+              relativePath:
+                'documents/' +
+                record.path.slice(
+                  record.documentsRoot.replace(/\/$/, '').length + 1,
+                ),
+            }),
       })),
     };
   }

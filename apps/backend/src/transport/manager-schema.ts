@@ -8,7 +8,8 @@ import {
   settingsSchema,
 } from '../schemas.js';
 
-const base = { commandId: z.uuid() };
+export const managerCommandIdSchema = z.uuid();
+const base = { commandId: managerCommandIdSchema };
 const chat = { ...base, chatId: z.uuid() };
 const version = z.number().int().positive();
 const versionedChat = { ...chat, version };
@@ -75,14 +76,13 @@ export const applicationCommandSchema = z.discriminatedUnion('type', [
               character.charCodeAt(0) >= 32 && character.charCodeAt(0) !== 127,
           ),
       ),
-    mimeType: z.enum([
-      'image/png',
-      'image/jpeg',
-      'image/webp',
-      'text/plain',
-      'text/markdown',
-      'application/pdf',
-    ]),
+    // Syntax belongs to the wire boundary; UploadOperations owns the content allowlist.
+    mimeType: z
+      .string()
+      .max(255)
+      .regex(
+        /^[A-Za-z0-9][A-Za-z0-9!#$&^_.+-]{0,126}\/[A-Za-z0-9][A-Za-z0-9!#$&^_.+-]{0,126}$/,
+      ),
     size: z.number().int().positive().max(UPLOAD_FILE_BYTES),
   }),
   z.object({

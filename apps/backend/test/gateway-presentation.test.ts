@@ -62,7 +62,11 @@ it('never publishes a terminal snapshot without either the preview or canonical 
     return original(...args);
   });
   f.gateway.complete(f.target, f.runId, 2);
-  await vi.waitFor(() => expect(f.store.pending(f.chat.id)).toEqual([]));
+  await vi.waitFor(() =>
+    expect(f.store.pending(f.chat.id)).toMatchObject([
+      { id: f.runId, text: 'Input', state: 'unknown' },
+    ]),
+  );
   const published = f.frames.filter(
     (frame) => frame.type === 'conversation.snapshot',
   );
@@ -95,6 +99,7 @@ it('never publishes a terminal snapshot without either the preview or canonical 
     ).toBe(true),
   );
   const canonical = await f.service.snapshot(f.chat.id);
+  expect(f.store.pending(f.chat.id)).toEqual([]);
   expect(canonical.settledRun).toBeUndefined();
   expect(
     canonical.messages.filter((message) => message.role === 'assistant'),
@@ -146,7 +151,11 @@ it.each(['final', 'aborted', 'error'] as const)(
       text: '',
       replace: true,
     });
-    await vi.waitFor(() => expect(f.store.pending(f.chat.id)).toEqual([]));
+    await vi.waitFor(() =>
+      expect(f.store.pending(f.chat.id)).toMatchObject([
+        { id: f.runId, text: 'Input', state: 'unknown' },
+      ]),
+    );
     const snapshot = await f.service.snapshot(f.chat.id);
     expect(snapshot.activeRun).toBeNull();
     expect(snapshot.settledRun).toMatchObject({

@@ -74,8 +74,14 @@ export const manager = defineWorker({
     ),
     R2_ACCESS_KEY_ID: bindings.secret(),
     R2_SECRET_ACCESS_KEY: bindings.secret(),
-    OPENAI_API_KEY: bindings.secret(),
-    ANTHROPIC_API_KEY: bindings.secret(),
+    ...Object.fromEntries(
+      ((process as NodeJS.Process).env.DEPLOY_PROVIDER_SECRET_NAMES ?? '')
+        .split(',')
+        .filter((name) =>
+          ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY'].includes(name),
+        )
+        .map((name) => [name, bindings.secret()]),
+    ),
   },
 });
 export const facade = defineWorker({

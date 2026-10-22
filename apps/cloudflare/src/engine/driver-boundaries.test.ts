@@ -65,6 +65,7 @@ it('refreshes container supervision outside a pending verification step and stop
     context: { state: { waitUntil } },
     control: { attach },
     objects: { verify },
+    jobs: { verify: vi.fn(() => Promise.resolve()) },
     pending: () => false,
     cancellationRequested: () => false,
   };

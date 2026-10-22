@@ -117,6 +117,7 @@ export async function verifyNativeRecovery(context) {
     const upload = await job('upload', {
       checkpointId,
       grants: await grants([...objects.values()], 'PUT'),
+      readbackGrants: await grants([...objects.values()], 'GET'),
     });
     assert.ok(upload);
     for (const object of objects.values()) {

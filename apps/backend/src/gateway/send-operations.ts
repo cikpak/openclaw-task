@@ -32,11 +32,39 @@ export class SendOperations {
       .object({ runId: z.string(), status: z.string() })
       .parse(await this.context.request('chat.send', params));
   }
-  async abort(mapping: GatewayMapping): Promise<void> {
-    await this.context.request('sessions.abort', {
-      key: mapping.sessionKey,
-      agentId: mapping.agentId,
-      clearQueued: true,
-    });
+  async abort(
+    mapping: GatewayMapping,
+    runId?: string,
+  ): Promise<void | { abortedRunId: string }> {
+    if (runId !== undefined && (!runId || runId !== runId.trim()))
+      throw new Error('Invalid native cancellation owner');
+    const result = z
+      .object({
+        ok: z.literal(true),
+        status: z.enum(['aborted', 'no-active-run']),
+        abortedRunId: z
+          .string()
+          .min(1)
+          .refine((id) => id === id.trim())
+          .nullable(),
+        warning: z.string().optional(),
+      })
+      .safeParse(
+        await this.context.request('sessions.abort', {
+          key: mapping.sessionKey,
+          agentId: mapping.agentId,
+          ...(runId !== undefined ? { runId } : { clearQueued: true }),
+        }),
+      );
+    // The native ACK follows terminal persistence. Empty, partial or generic
+    // success responses cannot establish which accepted work was cancelled.
+    if (
+      result.success &&
+      result.data.status === 'aborted' &&
+      result.data.abortedRunId &&
+      !result.data.warning &&
+      (runId === undefined || result.data.abortedRunId === runId)
+    )
+      return { abortedRunId: result.data.abortedRunId };
   }
 }

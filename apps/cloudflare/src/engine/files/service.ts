@@ -126,7 +126,13 @@ export class EngineFiles {
     return this.admitted('/files/input', { ...mapping, id });
   }
   handoff(data: GatewayMapping & { uploads: EngineUpload[] }): Promise<{
-    uploads: { id: string; path: string; name: string; mimeType: string }[];
+    uploads: {
+      id: string;
+      path: string;
+      name: string;
+      mimeType: string;
+      readFiles?: { path: string; name: string; mimeType: string }[];
+    }[];
   }> {
     return this.json('/files/handoff', data);
   }

@@ -18,7 +18,7 @@ export type EventPayload<T> = T extends ConversationEvent
 export type DispatchClaim =
   | { kind: 'delete'; chat: ChatRecord }
   | { kind: 'settings'; chat: ChatRecord; operation: SettingsOperation }
-  | { kind: 'message'; item: PendingMessage }
+  | { kind: 'message'; item: PendingMessage; steerTarget?: string }
   | null;
 
 export class ServiceState {
@@ -30,6 +30,10 @@ export class ServiceState {
   readonly locks = new Map<string, Promise<void>>();
   readonly driving = new Map<string, Promise<void>>();
   readonly steering = new Set<Promise<void>>();
+  readonly uninvokedSubmissions = new Map<
+    string,
+    { revision: number; submissionId: string; epoch: number }
+  >();
   readonly driveRequested = new Set<string>();
   readonly stateEpochs = new Map<string, number>();
   readonly readEpochs = new Map<string, number>();
@@ -43,6 +47,7 @@ export class ServiceState {
   readonly retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
   readonly refreshRetries = new Map<string, ReturnType<typeof setTimeout>>();
   reconciliation: Promise<void> | null = null;
+  reconciliationRequested = false;
   tombstoneOffset = 0;
   reconciled = false;
   constructor(

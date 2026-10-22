@@ -1,5 +1,18 @@
 # Implementation acceptance
 
+## Cloudflare implementation — 2026-10-22
+
+The current architecture is being delivered in five phases. Phases1–4 have
+recorded checks; Phase 5 integration and publication are being finalized. The
+[current release record](release-verification.md) owns present pass/fail/deployment
+status. Replacement OpenAI credentials passed private model-list validation;
+bounded direct paid inference also passed. The public real-provider application
+cycle remains pending. See [current architecture](architecture.md) and [operations](operations.md).
+
+The records below are **historical evidence for the earlier topology**. Their
+commands, unresolved publication status and deployment details do not describe
+the current Cloudflare runtime. Preserve failed attempts and later qualifications.
+
 The binding approved specification is the local-only `docs/plans/approved-openclaw-messenger.md`; it is not included in Git. The original local attachment is `.context/attachments/EmTrws/plan.md`. Repository readers can use [architecture.md](architecture.md) for the tracked architecture.
 
 ## Latest recorded verification 2026-10-13

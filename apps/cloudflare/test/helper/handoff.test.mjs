@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
+if (!process.env.OPENCLAW_TEST_IMAGE)
+  throw new Error(
+    'Run pnpm test:engine or select OPENCLAW_TEST_IMAGE explicitly',
+  );
 // Run inside the pinned image: filesystem /proc behavior is Linux, with only signed GET mocked.
 const script = `
 import assert from 'node:assert/strict';
@@ -52,7 +56,7 @@ test('pinned-image signed upload handoff is stable, bounded and current', () => 
       'GATEWAY_TOKEN=' + 'g'.repeat(32),
       '--env',
       'R2_ORIGIN=https://account.r2.cloudflarestorage.com',
-      'messenger-phase4-helper:local',
+      process.env.OPENCLAW_TEST_IMAGE,
       '--input-type=module',
       '-e',
       script,

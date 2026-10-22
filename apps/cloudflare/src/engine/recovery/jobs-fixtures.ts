@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { afterEach, vi } from 'vitest';
 import type { EngineContext, ManagerEnv } from '../../manager/types.js';
 import type { HelperJob, PrivateContainer } from '../container.js';
@@ -126,10 +127,26 @@ export function setup() {
     jobs: create(),
   };
 }
+export const receipt = {
+  version: 1,
+  checkpointId: descriptor.checkpointId,
+  count: 3,
+  objectsSha256: createHash('sha256')
+    .update(
+      JSON.stringify(
+        [descriptor.archive, descriptor.manifest, ...descriptor.files]
+          .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
+          .map(({ key, size, sha256 }) => [key, size, sha256]),
+      ),
+    )
+    .digest('hex'),
+};
 export function complete(
   f: ReturnType<typeof setup>,
   id = capture.id,
-  result: unknown = descriptor,
+  result: unknown = id.endsWith('-upload')
+    ? { verification: receipt }
+    : descriptor,
 ) {
   f.states.set(id, {
     operationId: id,

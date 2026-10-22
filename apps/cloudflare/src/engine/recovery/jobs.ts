@@ -1,3 +1,7 @@
+import {
+  assertVerification,
+  type VerificationReceipt,
+} from './verification.js';
 import { base64 } from './encoding.js';
 import type { EngineContext } from '../../manager/types.js';
 import type { PrivateContainer } from '../container.js';
@@ -14,8 +18,14 @@ interface CompositeJob {
   cancelled?: boolean;
   settled?: boolean;
   descriptor?: RecoveryDescriptor;
+  verification?: VerificationReceipt;
   primary?: { action: string; data?: unknown };
-  upload?: { checkpointId: string; grants: TransferGrant[]; reuse: string[] };
+  upload?: {
+    checkpointId: string;
+    grants: TransferGrant[];
+    readbackGrants: TransferGrant[];
+    reuse: string[];
+  };
 }
 /** Durable composition makes helper start/status idempotent across DO recreation. */
 export class RecoveryJobs {
@@ -98,6 +108,7 @@ export class RecoveryJobs {
     );
     if (!record) throw new Error('Private operation record unavailable');
     const { job } = record;
+    const operationId = record.stage === 'upload' ? `${id}-upload` : id;
     if (record.settled)
       return {
         ...job,
@@ -107,9 +118,9 @@ export class RecoveryJobs {
           : {}),
       };
     if (record.cancelled) {
-      const result = await this.container.job(
-        record.stage === 'upload' ? `${id}-upload` : id,
-      );
+      const result = await this.container.job(operationId);
+      if (result.bootId !== job.bootId || result.operationId !== operationId)
+        throw new Error('Stale private operation result');
       if (result.status !== 'running') {
         record.settled = true;
         await this.context.state.storage.put(this.key(id), record);
@@ -121,9 +132,7 @@ export class RecoveryJobs {
     }
     let result;
     try {
-      result = await this.container.job(
-        record.stage === 'upload' ? `${id}-upload` : id,
-      );
+      result = await this.container.job(operationId);
     } catch {
       await this.sendPrimary(record);
       return { ...job, state: 'running' };
@@ -138,7 +147,7 @@ export class RecoveryJobs {
       state,
       ...(checkpoint ? { checkpoint } : {}),
     });
-    if (result.bootId !== job.bootId)
+    if (result.bootId !== job.bootId || result.operationId !== operationId)
       throw new Error('Stale private operation result');
     if (result.status !== 'succeeded')
       return status(
@@ -171,17 +180,44 @@ export class RecoveryJobs {
       const grants = (await this.objects.grants(descriptor, 'PUT')).filter(
         (grant) => !reuse.includes(grant.key),
       );
-      record.upload = { checkpointId: descriptor.checkpointId, grants, reuse };
+      record.upload = {
+        checkpointId: descriptor.checkpointId,
+        grants,
+        readbackGrants: await this.objects.grants(descriptor, 'GET'),
+        reuse,
+      };
       record.stage = 'upload';
       await this.context.state.storage.put(this.key(id), record);
       await this.sendPrimary(record);
       return status('running');
     }
     if (!record.descriptor) throw new Error('Recovery descriptor unavailable');
+    const verification = (
+      result.result as { verification?: unknown } | undefined
+    )?.verification;
+    await assertVerification(record.descriptor, verification);
+    record.verification = verification as VerificationReceipt;
     record.settled = true;
     record.stage = 'complete';
     await this.context.state.storage.put(this.key(id), record);
     return status('complete', this.checkpoint(record.descriptor));
+  }
+  async verify(checkpoint: RecoveryCheckpoint): Promise<void> {
+    const record = await this.context.state.storage.get<CompositeJob>(
+      this.key(checkpoint.generation),
+    );
+    if (
+      !record ||
+      !record.settled ||
+      record.cancelled ||
+      record.stage !== 'complete' ||
+      record.job.kind !== 'capture' ||
+      !record.descriptor ||
+      JSON.stringify(this.checkpoint(record.descriptor)) !==
+        JSON.stringify(checkpoint)
+    )
+      throw new Error('Recovery readback completion unavailable');
+    await assertVerification(record.descriptor, record.verification);
   }
   private checkpoint(descriptor: RecoveryDescriptor): RecoveryCheckpoint {
     return {

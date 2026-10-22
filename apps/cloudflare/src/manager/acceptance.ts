@@ -6,6 +6,7 @@ import type {
 } from '@messenger/contracts';
 import { ConflictError } from '../../../backend/src/errors.js';
 import { enqueue } from '../../../backend/src/chats/queue.js';
+import { saveSteerIntent } from '../../../backend/src/chats/steer-intents.js';
 import { summary } from '../../../backend/src/chats/service-record.js';
 import type { ChatRecord, Store } from '../../../backend/src/storage/store.js';
 import type { ManagerAuthorization } from './authorization.js';
@@ -34,6 +35,7 @@ export function acceptMessage(
   store: Store,
   command: Extract<ManagerCommand, { type: 'conversation.message.send' }>,
   attachments: Attachment[],
+  steerTargetRunId?: string,
 ): ManagerResultData {
   const previous = store.commandRequest(command.commandId);
   if (previous && previous !== JSON.stringify(command))
@@ -61,6 +63,7 @@ export function acceptMessage(
       'Wait for this chat’s settings transition to finish.',
     );
   const item = enqueue(store, command, attachments);
+  if (steerTargetRunId) saveSteerIntent(store, item, steerTargetRunId);
   return saveAcceptance(store, command.commandId, {
     messageId: item.id,
     receipt: {

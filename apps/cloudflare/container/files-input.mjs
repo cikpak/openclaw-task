@@ -1,4 +1,5 @@
-import { mkdir, realpath, open } from 'node:fs/promises';
+import { importDirectory } from './files-directories.mjs';
+import { realpath, open } from 'node:fs/promises';
 import { resolve, relative } from 'node:path';
 import { constants } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -6,11 +7,12 @@ import { fileScope, unsafeFileCharacters } from './files-scope.mjs';
 export async function inputDirectory(data, create = false) {
   const { workspace, documentsRoot } = await fileScope(data);
   const session = createHash('sha256').update(data.sessionKey).digest('hex');
-  const path = resolve(documentsRoot, '.messenger-inputs', session);
-  if (create) await mkdir(path, { recursive: true, mode: 0o755 });
-  if ((await realpath(path)) !== path || !path.startsWith(workspace + '/'))
-    throw new Error('Unsafe import directory');
-  return path;
+  return importDirectory({ workspace, documentsRoot, session, create });
+}
+export async function inputLease(data) {
+  const scope = await fileScope(data);
+  const session = createHash('sha256').update(data.sessionKey).digest('hex');
+  return importDirectory({ ...scope, session, create: true, retain: true });
 }
 export async function inputRecord(data) {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(data.id ?? ''))

@@ -1,3 +1,4 @@
+import { configureLocalHost } from './local-host.mjs';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readdir, chown, chmod } from 'node:fs/promises';
 import { root, runtime, environment } from './environment.mjs';
@@ -10,6 +11,7 @@ import { createRecovery } from './recovery.mjs';
 import { filesBusy } from './files.mjs';
 import { serve } from './http.mjs';
 environment();
+await configureLocalHost();
 await mkdir(root, { recursive: true });
 await mkdir(runtime, { recursive: true, mode: 0o700 });
 await chmod(runtime, 0o700);

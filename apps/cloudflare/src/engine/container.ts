@@ -105,6 +105,7 @@ export class PrivateContainer {
         EXPECTED_MANAGER_PUBLIC_KEY: expected.publicKey,
         DEFAULT_MODEL: env.DEFAULT_MODEL ?? 'openai/gpt-5',
         R2_ORIGIN: env.R2_ORIGIN ?? '',
+        ...(env.LOCAL_R2_EMULATOR === '1' ? { LOCAL_R2_EMULATOR: '1' } : {}),
         ...(restoreExpected ? { RESTORE_EXPECTED: '1' } : {}),
         ...(env.OPENAI_API_KEY ? { OPENAI_API_KEY: env.OPENAI_API_KEY } : {}),
         ...(env.ANTHROPIC_API_KEY

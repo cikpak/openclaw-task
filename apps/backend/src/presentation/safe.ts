@@ -1,7 +1,10 @@
 import type { BrowserFile, BrowserToolSummary } from '@messenger/contracts';
+import { FileReferences } from './file-references.js';
 
 export interface FilePublication {
   nativePath: string;
+  /** Only supplied by an exact conversation-scoped audited publication policy. */
+  relativePath?: string | undefined;
   /** Classification is authoritative; location alone never grants publication. */
   classification: 'deliverable' | 'private' | 'unclassified';
   file: BrowserFile;
@@ -48,10 +51,12 @@ function eligible(entry: FilePublication, roots: readonly string[]): boolean {
 export class BrowserProjection {
   private readonly files: FilePublication[];
   private readonly secrets: readonly string[];
+  private readonly references: FileReferences;
   constructor(policy: ProjectionPolicy) {
     this.files = policy.publications
       .filter((file) => eligible(file, policy.documentsRoots))
       .sort((a, b) => b.nativePath.length - a.nativePath.length);
+    this.references = new FileReferences(this.files, policy.documentsRoots);
     this.secrets = (policy.secrets ?? []).filter(Boolean);
     if (this.secrets.some((secret) => secret.length > 65536))
       throw new Error('Projection secret exceeds the safe bound.');
@@ -67,23 +72,18 @@ export class BrowserProjection {
     let output = input;
     for (const secret of this.secrets)
       output = output.split(secret).join('[redacted]');
-    for (const entry of this.files) {
-      const escaped = entry.nativePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      output = output.replace(
-        new RegExp(
-          `(?:file:\\/\\/)?${escaped}(?=$|[\\s\\)\\]}>"'\u0060,;!?])`,
-          'g',
-        ),
-        `file:${entry.file.id}`,
-      );
-    }
+    output = this.references.replace(output);
     // Preserve public https URLs, while masking native absolute, home and Windows paths.
     output = output.replace(
       /(^|[<([{"'=,:`])(?:file:\/\/)?(?:\/(?!\/)|~\/|[A-Za-z]:[\\/])[^\s<>"'`]+/g,
       '$1' + PRIVATE_REFERENCE,
     );
     output = output.replace(
-      /(^|[<([{"'=,:`])(?:documents\/|\.openclaw\/|\.{1,2}\/)[^\s<>"'`]+/g,
+      /(^|[<([{"'=,:`])(?:documents\/|\.openclaw\/|\.messenger-inputs\/|\.pdf-read-[a-f0-9]{64}\/|\.{1,2}\/)[^\s<>"'`]+/g,
+      '$1' + PRIVATE_REFERENCE,
+    );
+    output = output.replace(
+      /(^|[<([{"'=,:`])\.pdf-read-[a-f0-9]{64}(?=$|[)\]}>.,;!?"'`])/g,
       '$1' + PRIVATE_REFERENCE,
     );
     output = output.replace(
@@ -101,8 +101,7 @@ export class BrowserProjection {
     return stream.push(input) + stream.finish();
   }
   continuesFile(input: string): boolean {
-    const prefix = input.replace(/^[<([{"'=,:`]*(?:file:\/\/)?/, '');
-    return this.files.some((entry) => entry.nativePath.startsWith(prefix));
+    return this.references.continues(input);
   }
   redactor(): SecretRedactor {
     return new SecretRedactor(this.secrets);

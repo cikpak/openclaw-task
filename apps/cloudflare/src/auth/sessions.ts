@@ -72,16 +72,19 @@ async function limitLogin(env: BackendEnv, request: Request): Promise<void> {
     VALUES (?, ?, 1) ON CONFLICT(key_hash) DO UPDATE SET
     attempts = CASE WHEN window_start <= ? THEN 1 ELSE attempts + 1 END,
     window_start = CASE WHEN window_start <= ? THEN excluded.window_start ELSE window_start END
-    RETURNING attempts`,
+    RETURNING attempts, window_start`,
   )
     .bind(key, now, now - 60_000, now - 60_000)
-    .first<{ attempts: number }>();
+    .first<{ attempts: number; window_start: number }>();
   if (!row || row.attempts > 5)
-    fail(
-      429,
-      'RATE_LIMITED',
-      'Too many sign-in attempts. Try again in one minute.',
-    );
+    fail(429, 'RATE_LIMITED', 'Too many sign-in attempts. Try again shortly.', {
+      'Retry-After': String(
+        Math.max(
+          1,
+          Math.ceil(((row?.window_start ?? now) + 60_000 - now) / 1000),
+        ),
+      ),
+    });
 }
 
 async function prune(env: BackendEnv): Promise<void> {

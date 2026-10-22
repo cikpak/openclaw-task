@@ -6,6 +6,8 @@ import { autoTitle, lifecycle, pending } from './service-catalog.js';
 import { changed, withLock } from './service-runtime.js';
 import type { DispatchClaim, ServiceState } from './service-state.js';
 import { submit } from './service-submit.js';
+import { claimSubmission } from './submission-claims.js';
+import { consumeSteerIntent, steerTarget } from './steer-intents.js';
 export function startSteer(
   ctx: ServiceState,
   id: string,
@@ -67,24 +69,44 @@ export async function drive(ctx: ServiceState, id: string): Promise<void> {
       }
     }
     if (chat.status === 'recovery') return Promise.resolve(null);
+    const items = pending(ctx, id);
+    const active = ctx.streams.get(id)?.id;
     if (
-      ctx.streams.has(id) ||
-      pending(ctx, id).some((item) => item.state !== 'pending')
+      items.some(
+        (item) => item.state === 'unknown' || item.state === 'submitting',
+      )
     )
       return Promise.resolve(null);
-    const item = pending(ctx, id).find(
-      (candidate) => candidate.state === 'pending',
+    if (!active && items.some((item) => item.state !== 'pending'))
+      return Promise.resolve(null);
+    const item = items.find(
+      (candidate) =>
+        candidate.state === 'pending' &&
+        (!active || steerTarget(ctx.store, candidate) === active),
     );
     if (!item) return Promise.resolve(null);
-    item.state = 'submitting';
-    ctx.store.savePending(item);
+    ctx.store.db.transaction(() => {
+      consumeSteerIntent(ctx.store, item.id);
+      claimSubmission(ctx, item);
+      ctx.store.savePending(item);
+    })();
     autoTitle(ctx, id, item.text);
     changed(ctx, id);
-    return Promise.resolve({ kind: 'message' as const, item });
+    return Promise.resolve({
+      kind: 'message' as const,
+      item,
+      ...(active ? { steerTarget: active } : {}),
+    });
   });
   if (!claim || ctx.closed) return;
   if (claim.kind === 'message') {
-    await submit(ctx, id, claim.item, 'queue');
+    await submit(
+      ctx,
+      id,
+      claim.item,
+      claim.steerTarget ? 'steer' : 'queue',
+      claim.steerTarget,
+    );
     return;
   }
   if (claim.kind === 'delete') {

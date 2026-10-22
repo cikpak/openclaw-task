@@ -664,6 +664,7 @@ describe('chat creation and durable intent', () => {
     });
     f.gateway.ready = true;
     f.gateway.emit({ type: 'connection', ready: true });
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'));
     f.gateway.ready = false;
     f.gateway.emit({ type: 'connection', ready: false });
     finish(authoritative);

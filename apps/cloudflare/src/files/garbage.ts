@@ -27,24 +27,17 @@ export class RecoveryGarbage {
           .get()
       )
         return;
-      const stateRow = this.context.store.db
-        .prepare('SELECT state FROM engine_lifecycle WHERE id = 1')
-        .get() as { state: string } | undefined;
-      if (!stateRow) return;
-      const state = JSON.parse(stateRow.state) as LifecycleState;
-      if (
-        !['asleep', 'ready'].includes(state.phase) ||
-        state.job ||
-        state.pendingCheckpoint
-      )
-        return;
+      if (!this.idle()) return;
       const jobs = await this.context.state.storage.list<{
         settled?: boolean;
         descriptor?: RecoveryDescriptor;
         job: { id: string; checkpoint?: RecoveryCheckpoint };
       }>({ prefix: 'engine-helper-' });
-      for (const [key, job] of jobs)
+      for (const [key, job] of jobs) {
+        if (!this.idle()) return;
         if (job.settled) await this.context.state.storage.delete(key);
+      }
+      if (!this.idle()) return;
       const refs = this.context.store.db
         .prepare(
           'SELECT current,previous FROM recovery_references WHERE id = 1',
@@ -134,5 +127,17 @@ export class RecoveryGarbage {
     } finally {
       this.running = false;
     }
+  }
+  private idle(): boolean {
+    const row = this.context.store.db
+      .prepare('SELECT state FROM engine_lifecycle WHERE id = 1')
+      .get() as { state: string } | undefined;
+    if (!row) return false;
+    const state = JSON.parse(row.state) as LifecycleState;
+    return (
+      ['asleep', 'ready'].includes(state.phase) &&
+      !state.job &&
+      !state.pendingCheckpoint
+    );
   }
 }

@@ -100,7 +100,8 @@ export class UploadMedia implements MessageMedia {
         );
       return row;
     });
-    this.compatible(rows, settings, await this.gateway.models(mapping));
+    const catalog = await this.gateway.models(mapping);
+    this.compatible(rows, settings, catalog);
     validateMessageSize(rows.map((row) => row.size));
     if (!this.handoff) throw new Error('Attachment delivery unavailable');
     const grants = await Promise.all(
@@ -109,6 +110,33 @@ export class UploadMedia implements MessageMedia {
         url: await this.uploads.objects.signedGet(row),
       })),
     );
-    return this.handoff(mapping, grants);
+    const prepared = await this.handoff(mapping, grants);
+    if (
+      !catalog
+        .find((model) => model.id === settings.model)
+        ?.input.includes('image')
+    ) {
+      for (const file of prepared) {
+        if (
+          !file.nativeReadFiles?.some((item) =>
+            item.mimeType.startsWith('image/'),
+          )
+        )
+          continue;
+        const text = file.nativeReadFiles.filter(
+          (item) => item.mimeType === 'text/plain',
+        );
+        if (!text.length)
+          throw new ApplicationError(
+            422,
+            'ATTACHMENT_MODEL_INCOMPATIBLE',
+            'This PDF requires an image-capable model. Choose a compatible model or remove the file.',
+          );
+        file.nativeReadFiles = text;
+        file.nativeReadNote =
+          'PDF text is available. The selected model cannot inspect PDF page images; explain this limitation if visual content matters.';
+      }
+    }
+    return prepared;
   }
 }

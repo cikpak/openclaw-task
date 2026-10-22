@@ -29,6 +29,10 @@ import { projectHistory, refresh } from './service-history.js';
 import { mapping } from './service-record.js';
 import { changed, publish, withLock } from './service-runtime.js';
 import type { ServiceState } from './service-state.js';
+import {
+  locallyUninvoked,
+  invalidateChatSubmissions,
+} from './submission-claims.js';
 export function prepareMessage(
   ctx: ServiceState,
   settings: ChatSettings,
@@ -129,6 +133,8 @@ export function lifecycle(ctx: ServiceState): LifecycleContext {
       return isClosed();
     },
     streams: ctx.streams,
+    locallyUninvoked: (item) => locallyUninvoked(ctx, item),
+    invalidateUninvoked: (id) => invalidateChatSubmissions(ctx, id),
     projectHistory: (id, history) => projectHistory(ctx, id, history),
     changed: (id) => changed(ctx, id),
     publish: (event) => publish(ctx, event),

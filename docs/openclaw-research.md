@@ -1,5 +1,25 @@
 # OpenClaw compatibility research
 
+## Current Cloudflare compatibility boundary — 2026-10-22
+
+The production DO uses `@openclaw/gateway-client/browser` over native private
+container Fetcher WebSockets. Internal application TLS/certificate pinning is not
+used; public browser HTTPS/WSS and native device authentication remain required.
+The helper approves only the expected identity. OpenClaw/SDK remain pinned to
+2026.10.1 and the image digest is immutable.
+
+Native history/message display caps require full-message rehydration. The final
+private reader imports the immutable image bundles, whose filenames differ from
+the npm distribution. Image upgrades must rerun complete long-message, pairing,
+reconnect, recovery and pagination checks. Helper SQLite validation uses pinned
+Node disposable clones including sidecars. See [architecture](architecture.md) and
+[release evidence](release-verification.md).
+
+The failed custom TLS adapter and earlier transport assumptions remain historical
+research, not current trust claims. No production pass follows from source review.
+
+## Earlier application source research (historical)
+
 Pinned runtime, Gateway client, and Gateway protocol: **2026.10.1**.
 
 Primary sources inspected during implementation:

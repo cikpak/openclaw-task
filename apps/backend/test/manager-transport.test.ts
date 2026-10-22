@@ -74,6 +74,72 @@ describe('manager application ingress', () => {
       error: { code: 'AUTHENTICATION_REQUIRED' },
     });
   });
+  it('correlates invalid command bodies only with a valid bounded UUID', async () => {
+    const authorize = vi.fn();
+    const handler = vi.fn();
+    const transport = new ManagerTransport({ authorize }, {
+      'upload.begin': handler,
+    } as unknown as ManagerHandlers);
+    const commandId = randomUUID();
+    const valid = await transport.dispatch(
+      { type: 'upload.begin', commandId, secret: '/recovery/private' },
+      'correlation',
+    );
+    expect(valid).toMatchObject({
+      commandId,
+      ok: false,
+      error: { status: 400, code: 'INVALID_REQUEST' },
+    });
+    expect(JSON.stringify(valid)).not.toContain('/recovery/private');
+    for (const candidate of [
+      undefined,
+      null,
+      42,
+      '/recovery/private-token',
+      'a'.repeat(36),
+      `${commandId}extra`,
+      'secret'.repeat(10_000),
+    ]) {
+      const result = await transport.dispatch(
+        { type: 'upload.begin', commandId: candidate },
+        'correlation',
+      );
+      expect(result).toMatchObject({ commandId: 'invalid', ok: false });
+      expect(JSON.stringify(result)).not.toContain('private-token');
+      expect(JSON.stringify(result)).not.toContain('secret');
+    }
+    const inherited = Object.create({ commandId }) as object;
+    expect(await transport.dispatch(inherited, 'correlation')).toMatchObject({
+      commandId: 'invalid',
+    });
+    expect(authorize).not.toHaveBeenCalled();
+    expect(handler).not.toHaveBeenCalled();
+  });
+  it('accepts MIME syntax for policy rejection without accepting malformed MIME values', () => {
+    const command = {
+      type: 'upload.begin',
+      commandId: randomUUID(),
+      name: 'document.html',
+      size: 1,
+    };
+    for (const mimeType of ['text/html', 'application/vnd.example+json'])
+      expect(
+        managerCommandSchema.safeParse({ ...command, mimeType }).success,
+      ).toBe(true);
+    for (const mimeType of [
+      '',
+      'text',
+      'text/',
+      '/html',
+      'text/html; charset=utf-8',
+      'text/ht\nml',
+      'text/*',
+      `text/${'a'.repeat(128)}`,
+    ])
+      expect(
+        managerCommandSchema.safeParse({ ...command, mimeType }).success,
+      ).toBe(false);
+  });
   it('keeps durable receipt acknowledgement independent of engine execution', async () => {
     const command = {
       type: 'conversation.message.send',

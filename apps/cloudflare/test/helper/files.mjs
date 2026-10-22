@@ -2,7 +2,11 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { randomBytes, createHash, randomUUID } from 'node:crypto';
-const image = process.argv[2] ?? 'messenger-phase4-helper:local';
+const image = process.argv[2] ?? process.env.OPENCLAW_TEST_IMAGE;
+if (!image)
+  throw new Error(
+    'Run pnpm test:engine or select OPENCLAW_TEST_IMAGE explicitly',
+  );
 const name = `messenger-files-${randomUUID().slice(0, 8)}`;
 const token = randomBytes(32).toString('hex');
 const key = randomBytes(32),

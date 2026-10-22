@@ -1,9 +1,17 @@
+import { verifyRemote } from './readback.mjs';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { join } from 'node:path';
 import { objects, filename, grantsFor, verify } from './objects.mjs';
-export async function upload(stage, descriptor, grants, reuse = [], signal) {
+export async function upload(
+  stage,
+  descriptor,
+  grants,
+  reuse = [],
+  signal,
+  readbackGrants,
+) {
   const all = objects(descriptor),
     reused = new Set(reuse);
   if (
@@ -16,8 +24,7 @@ export async function upload(stage, descriptor, grants, reuse = [], signal) {
   )
     throw new Error('Invalid reused objects');
   const changed = all.filter((object) => !reused.has(object.key)),
-    authorizations = grantsFor(grants, changed),
-    receipts = [];
+    authorizations = grantsFor(grants, changed);
   for (const object of changed) {
     signal.throwIfAborted();
     const path = join(stage, filename(object, descriptor));
@@ -41,18 +48,12 @@ export async function upload(stage, descriptor, grants, reuse = [], signal) {
       throw new Error('Object upload rejected');
     }
     await response.body?.cancel();
-    receipts.push({
-      key: object.key,
-      size: object.size,
-      sha256: object.sha256,
-      etag: response.headers.get('etag'),
-    });
   }
+  const verification = await verifyRemote(descriptor, readbackGrants, signal);
   return {
     uploaded: true,
     checkpointId: descriptor.checkpointId,
-    objects: receipts,
-    reused: [...reused],
+    verification,
   };
 }
 export async function download(stage, descriptor, grants, signal) {

@@ -23,6 +23,24 @@ export const upstreamMessageSchema = z
     __openclaw: z
       .object({
         id: z.string().optional(),
+        idempotencyKey: z.string().optional(),
+        steerTargetRunId: z.string().optional(),
+        messengerProcessing: z
+          .object({
+            runId: z
+              .string()
+              .min(1)
+              .refine((value) => value === value.trim()),
+            keys: z
+              .array(
+                z
+                  .string()
+                  .min(1)
+                  .refine((value) => value === value.trim()),
+              )
+              .nonempty(),
+          })
+          .optional(),
         truncated: z.boolean().optional(),
         runId: z.string().min(1).optional(),
         seq: z.number().int().nonnegative().optional(),
@@ -31,6 +49,7 @@ export const upstreamMessageSchema = z
       .optional(),
     role: z.string().optional(),
     runId: z.string().min(1).optional(),
+    idempotencyKey: z.string().optional(),
     toolCallId: z.string().min(1).max(256).optional(),
     toolName: z.string().max(100).optional(),
     content: z
@@ -77,9 +96,11 @@ const receiptSchema = z.object({
   runId: z.string(),
   state: z.enum(['pending', 'consumed']),
   cancelled: z.boolean().optional(),
+  consumedByEventId: z.string().optional(),
 });
 export const historySchema = z
   .object({
+    sessionKey: z.string().optional(),
     sessionId: z.string().optional(),
     messages: z.array(z.unknown()),
     sessionInfo: settingsEntrySchema.optional(),

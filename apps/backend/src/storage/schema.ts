@@ -9,11 +9,13 @@ export function initializeStore(db: SqlDatabase): void {
       CREATE TABLE IF NOT EXISTS preferences (id INTEGER PRIMARY KEY CHECK(id = 1), json TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS command_results (id TEXT PRIMARY KEY, json TEXT NOT NULL, created_at INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS pending_messages (id TEXT PRIMARY KEY, chat_id TEXT NOT NULL REFERENCES chats(id), position INTEGER NOT NULL, json TEXT NOT NULL, UNIQUE(chat_id, position));
+      CREATE TABLE IF NOT EXISTS pending_steer_intents (message_id TEXT PRIMARY KEY REFERENCES pending_messages(id) ON DELETE CASCADE, revision INTEGER NOT NULL, target_run_id TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS settings_operations (chat_id TEXT PRIMARY KEY REFERENCES chats(id), json TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS chat_metadata (chat_id TEXT PRIMARY KEY REFERENCES chats(id), json TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS command_requests (id TEXT PRIMARY KEY, json TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS chat_history (chat_id TEXT PRIMARY KEY REFERENCES chats(id), json TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS submission_scopes (message_id TEXT PRIMARY KEY REFERENCES pending_messages(id) ON DELETE CASCADE, session_id TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS pending_cancellations (message_id TEXT PRIMARY KEY REFERENCES pending_messages(id) ON DELETE CASCADE, revision INTEGER NOT NULL, submission_id TEXT NOT NULL, session_id TEXT NOT NULL, owner_run_id TEXT NOT NULL, confirmed INTEGER NOT NULL DEFAULT 0);
       CREATE TABLE IF NOT EXISTS creation_commands (id TEXT PRIMARY KEY, chat_id TEXT NOT NULL, json TEXT NOT NULL, deleted INTEGER NOT NULL DEFAULT 0);
       CREATE TABLE IF NOT EXISTS deletion_tombstones (chat_id TEXT PRIMARY KEY, json TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS chat_tools (chat_id TEXT NOT NULL REFERENCES chats(id), id TEXT NOT NULL, sequence INTEGER NOT NULL, json TEXT NOT NULL, PRIMARY KEY(chat_id, id));

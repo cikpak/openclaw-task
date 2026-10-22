@@ -96,6 +96,7 @@ export async function handleGatewayEvent(
     }
   }
   const terminalState = event.state;
+  ctx.reconciled = false;
   await withLock(ctx, chat.id, () => {
     const current = ctx.store.getChat(chat.id);
     if (current.status === 'deleting') return Promise.resolve();
@@ -109,9 +110,21 @@ export async function handleGatewayEvent(
     );
     if (ctx.streams.get(chat.id)?.id === event.runId)
       ctx.streams.delete(chat.id);
-    for (const item of pending(ctx, chat.id))
-      if (item.submissionId === event.runId) ctx.store.removePending(item.id);
-    current.status = ctx.streams.has(chat.id) ? 'running' : 'idle';
+    for (const item of pending(ctx, chat.id)) {
+      if (item.submissionId !== event.runId) continue;
+      // A terminal frame can precede native journal/receipt persistence or a
+      // failed shutdown read. Retain accepted text until receipt reconciliation
+      // proves its outcome, and fence successors rather than replaying it.
+      item.state = 'unknown';
+      ctx.store.savePending(item);
+    }
+    current.status = pending(ctx, chat.id).some(
+      (item) => item.state === 'unknown',
+    )
+      ? 'recovery'
+      : ctx.streams.has(chat.id)
+        ? 'running'
+        : 'idle';
     current.unread = true;
     ctx.store.saveChat(current);
     changed(ctx, chat.id);

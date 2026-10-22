@@ -1,7 +1,8 @@
+import { application, managerCommand } from './manager-client.js';
 import { mkdir, readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { cleanChats, createChat, idle, login, send } from './helpers.js';
-import type { Artifact } from '@messenger/contracts';
+import type { BrowserFile } from '@messenger/contracts';
 
 test('generated documents are scoped, listed and downloadable from Markdown without SPA navigation', async ({
   page,
@@ -10,94 +11,32 @@ test('generated documents are scoped, listed and downloadable from Markdown with
     /^messenger-acceptance-[a-z0-9-]+$/u,
   );
   await login(page);
-  const models = await page.request.get('/api/models');
+  const models = await application(page).get('/api/models?refresh=true');
   expect(models.status()).toBe(200);
   expect(await models.text()).toContain('mock/test-model');
-  await cleanChats(page.request);
+  await cleanChats(page);
   await page.reload();
   const chatId = await createChat(page, 'Generated document');
   await send(page, 'TOOL_WRITE_DOC_FIXTURE');
   await idle(page);
   const { artifacts } = (await (
-    await page.request.get(`/api/chats/${chatId}/artifacts`)
-  ).json()) as { artifacts: Artifact[] };
+    await application(page).get(`/api/chats/${chatId}/artifacts`)
+  ).json()) as { artifacts: BrowserFile[] };
   const generated = artifacts.find(
-    (artifact) => artifact.sourcePath === 'documents/artifact-fixture.txt',
+    (artifact) => artifact.name === 'artifact-fixture.txt',
   );
   expect(generated).toBeDefined();
-  const tool = page.locator('[data-tool-id]').filter({
-    has: page.getByRole('button', {
-      name: 'write · completed · Tool details',
-      exact: true,
-    }),
-  });
-  await expect(tool).toHaveCount(1);
-  await expect(page.getByText('Tool output', { exact: true })).toHaveCount(0);
-  const trigger = tool.getByRole('button', {
-    name: 'write · completed · Tool details',
-    exact: true,
-  });
-  await expect(trigger).toHaveText('Write');
-  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
-  await trigger.click();
-  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
-  const details = page.getByRole('dialog', {
-    name: 'write · completed · Tool details',
-    exact: true,
-  });
-  await expect(details).toBeVisible();
-  await expect(details).toHaveAttribute('popover', 'manual');
-  expect(
-    await details.evaluate((element) => element.closest('[data-tool-id]')),
-  ).toBeNull();
-  await expect(
-    details.getByRole('heading', { name: 'Parameters', exact: true }),
-  ).toBeVisible();
-  await expect(details.getByText('Path', { exact: true })).toBeVisible();
-  await expect(
-    details.getByRole('heading', { name: 'Result', exact: true }),
-  ).toBeVisible();
-  const content = details
-    .locator('details')
-    .filter({ has: page.getByText('Document content', { exact: true }) });
-  await expect(content).toHaveCount(1);
-  const disclosure = content.locator(':scope > summary');
-  await expect(disclosure.locator('svg')).toHaveAttribute('width', '16');
-  await expect(disclosure.locator('svg')).toHaveAttribute('height', '16');
-  await expect(disclosure.locator('svg')).toHaveAttribute(
-    'viewBox',
-    '0 0 24 24',
-  );
-  await expect(disclosure.locator('svg')).toHaveAttribute('fill', 'none');
-  await expect(disclosure).toHaveCSS('list-style-type', 'none');
-  await disclosure.click();
-  await expect(
-    content.getByText('TOOL_FILE_TOKEN', { exact: true }),
-  ).toBeVisible();
+  expect(generated?.id).toMatch(/^[A-Za-z0-9_-]+$/u);
+  expect(generated).not.toHaveProperty('sourcePath');
+  await expect(page.locator('[data-tool-id]')).toHaveCount(1);
+  await expect(page.locator('main')).not.toContainText('/recovery/');
+  await expect(page.locator('main')).not.toContainText('auth-profiles.json');
   await expect(
     page.getByRole('button', {
       name: 'Download generated document',
       exact: true,
     }),
   ).toBeVisible();
-  const order = await page
-    .getByRole('button', { name: 'Download generated document', exact: true })
-    .evaluate((button) => {
-      const tool = document.querySelector('[data-tool-id]');
-      const final = button.closest('[data-message-role="assistant"]');
-      return (
-        !!tool &&
-        !!final &&
-        !!(
-          tool.compareDocumentPosition(final) & Node.DOCUMENT_POSITION_FOLLOWING
-        )
-      );
-    });
-  expect(order).toBe(true);
-  await page.keyboard.press('Escape');
-  await expect(details).not.toBeVisible();
-  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
-  await expect(trigger).toBeFocused();
   const before = page.url();
   const clicked = page.waitForEvent('download');
   await page
@@ -114,7 +53,7 @@ test('generated documents are scoped, listed and downloadable from Markdown with
     .click();
   const panel = page.getByRole('region', { name: 'From agent', exact: true });
   await expect(
-    panel.getByRole('link', { name: /artifact-fixture\.txt/u }),
+    panel.getByRole('button', { name: /artifact-fixture\.txt/u }),
   ).toBeVisible();
   await page
     .getByRole('region', { name: 'Conversation files', exact: true })
@@ -131,20 +70,28 @@ test('generated documents are scoped, listed and downloadable from Markdown with
     fullPage: true,
   });
   const sidebarDownload = page.waitForEvent('download');
-  await panel.getByRole('link', { name: /artifact-fixture\.txt/u }).click();
+  await panel.getByRole('button', { name: /artifact-fixture\.txt/u }).click();
   const same = await sidebarDownload;
   expect(await readFile(await same.path(), 'utf8')).toBe('TOOL_FILE_TOKEN');
+  await page.reload();
+  await expect(page.locator('[data-tool-id]')).toHaveCount(1);
+  await expect(page.locator('main')).not.toContainText('/recovery/');
+  await expect(page.locator('main')).not.toContainText('auth-profiles.json');
   const other = await createChat(page, 'Different document chat');
-  expect(
-    (
-      await page.request.get(`/api/chats/${other}/artifacts/${generated!.id}`)
-    ).status(),
-  ).toBe(404);
-  expect(
-    (
-      await page.request.get(
-        `/api/chats/${chatId}/artifacts/resolve?path=${encodeURIComponent('../auth-profiles.json')}`,
-      )
-    ).status(),
-  ).toBe(404);
+  const foreign = await managerCommand(page, {
+    type: 'files.resolve',
+    commandId: crypto.randomUUID(),
+    chatId: other,
+    fileId: generated!.id,
+  });
+  expect(foreign.ok).toBe(false);
+  if (!foreign.ok) expect(foreign.error.status).toBe(404);
+  // Native path resolution is absent; arbitrary strings cannot become file capabilities.
+  const privateFile = await managerCommand(page, {
+    type: 'files.resolve',
+    commandId: crypto.randomUUID(),
+    chatId,
+    fileId: '../auth-profiles.json',
+  });
+  expect(privateFile.ok).toBe(false);
 });

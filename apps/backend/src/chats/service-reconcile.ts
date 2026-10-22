@@ -8,9 +8,19 @@ import { refresh } from './service-history.js';
 import { changed, publish, withLock } from './service-runtime.js';
 import type { ServiceState } from './service-state.js';
 export function reconcile(ctx: ServiceState): Promise<void> {
+  ctx.reconciliationRequested = true;
   if (ctx.reconciliation) return ctx.reconciliation;
-  const work = reconcileAll(ctx).finally(() => {
-    ctx.reconciliation = null;
+  const work = Promise.resolve().then(async () => {
+    try {
+      do {
+        ctx.reconciliationRequested = false;
+        await reconcileAll(ctx);
+      } while (ctx.reconciliationRequested && !ctx.closed);
+    } finally {
+      // Release ownership before this promise settles: a request after the last
+      // loop check must start its own pass instead of joining completed work.
+      ctx.reconciliation = null;
+    }
   });
   ctx.reconciliation = work;
   return work;
@@ -82,8 +92,23 @@ export async function reconcileAll(ctx: ServiceState): Promise<void> {
         : ctx.tombstoneOffset + 10;
   }
   if (epoch !== ctx.connectionEpoch || ctx.closed) return;
+  const awaitingTerminalReceipt = ctx.store
+    .listChats()
+    .some((chat) =>
+      ctx.store
+        .pending(chat.id)
+        .some(
+          (item) =>
+            item.state === 'unknown' ||
+            (item.state !== 'pending' && !ctx.streams.has(chat.id)) ||
+            ctx.terminalRuns.has(`${chat.id}:${item.submissionId}`),
+        ),
+    );
   ctx.reconciled =
-    successful && epoch === ctx.connectionEpoch && ctx.gateway.ready;
+    successful &&
+    epoch === ctx.connectionEpoch &&
+    ctx.gateway.ready &&
+    !awaitingTerminalReceipt;
   publish(ctx, {
     type: 'connection.state',
     state: ctx.reconciled ? 'ready' : 'unavailable',

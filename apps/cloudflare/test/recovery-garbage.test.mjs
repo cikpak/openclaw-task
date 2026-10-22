@@ -35,6 +35,22 @@ export class GarbageProbe extends DurableObject {
   const driver=Object.create(EngineDriver.prototype);driver.context=context;driver.objects=new RecoveryObjects(context.env);driver.onCommit=()=>{};
   const commit=value=>this.ctx.storage.transactionSync(()=>driver.commit(value));
   commit(A);
+  if(action==='receipt-list' || action==='receipt-delete') {
+   commit(B);await this.ctx.storage.put('engine-helper-first',{settled:true,job:{id:'first'}});
+   await this.ctx.storage.put('engine-helper-second',{settled:true,job:{id:'second'}});
+   let entered,release;const whenEntered=new Promise(resolve=>entered=resolve),gate=new Promise(resolve=>release=resolve);
+   let recordDeletes=0,objectDeletes=0,objectLists=0;
+   const storage={
+    list:async(options)=>{const result=await this.ctx.storage.list(options);if(action==='receipt-list'){entered();await gate;}return result;},
+    delete:async(key)=>{recordDeletes++;const result=await this.ctx.storage.delete(key);if(action==='receipt-delete'&&recordDeletes===1){entered();await gate;}return result;},
+   };
+   context.state={storage};context.env={RECOVERY_BUCKET:{list:(options)=>{objectLists++;return bucket.list(options);},delete:(key)=>{objectDeletes++;return bucket.delete(key);}}};
+   const collecting=new RecoveryGarbage(context,files).collect();await whenEntered;
+   store.db.prepare('UPDATE engine_lifecycle SET state=? WHERE id=1').run(JSON.stringify({phase:'capturing',job:{id:'new-capture'},pendingCheckpoint:B}));
+   release();await collecting;
+   const refs=store.db.prepare('SELECT current,previous FROM recovery_references WHERE id=1').get();
+   return Response.json({receiptPreserved:!!(await this.ctx.storage.get('engine-helper-second')),recordDeletes,objectDeletes,objectLists,current:JSON.parse(refs.current).generation,previous:JSON.parse(refs.previous).generation,currentObject:!!(await bucket.head(keyB)),previousObject:!!(await bucket.head(keyA))});
+  }
   if(action==='tombstones') {
    let rejected=0;
    for(const key of [keyC,C.descriptor.archive.key,C.descriptor.manifest.key]) {
@@ -155,5 +171,30 @@ test('commit refuses file, archive and manifest objects with an unresolved durab
     rejected: 3,
     currentGeneration: 'generation-A',
     currentExists: true,
+  });
+});
+
+test('a lifecycle change during helper record listing preserves verification receipts and both recovery references', async () => {
+  assert.deepEqual(await probe('receipt-list'), {
+    receiptPreserved: true,
+    recordDeletes: 0,
+    objectDeletes: 0,
+    objectLists: 0,
+    current: 'generation-B',
+    previous: 'generation-A',
+    currentObject: true,
+    previousObject: true,
+  });
+});
+test('a lifecycle change during one helper record deletion preserves the next receipt and skips reference cleanup', async () => {
+  assert.deepEqual(await probe('receipt-delete'), {
+    receiptPreserved: true,
+    recordDeletes: 1,
+    objectDeletes: 0,
+    objectLists: 0,
+    current: 'generation-B',
+    previous: 'generation-A',
+    currentObject: true,
+    previousObject: true,
   });
 });

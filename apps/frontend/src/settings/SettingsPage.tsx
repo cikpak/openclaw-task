@@ -174,19 +174,17 @@ export function SettingsPage() {
         </div>
       </section>
       <ErrorNotice message={error} />
-      {error || action === 'refresh' ? (
-        <Button
-          busy={action === 'refresh'}
-          icon="refresh"
-          type="button"
-          disabled={busy}
-          onClick={() => {
-            void refreshLatest();
-          }}
-        >
-          Refresh latest values and models, keep my edits
-        </Button>
-      ) : null}
+      <Button
+        busy={action === 'refresh'}
+        icon="refresh"
+        type="button"
+        disabled={busy || (!etag && !error)}
+        onClick={() => {
+          void refreshLatest();
+        }}
+      >
+        Refresh latest values and models, keep my edits
+      </Button>
       {refreshNote ? (
         <p role="status" className={styles.status}>
           {refreshNote}

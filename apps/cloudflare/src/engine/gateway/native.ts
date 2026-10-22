@@ -17,7 +17,7 @@ import {
 import { SafeGatewayProjection } from './safe-projection.js';
 export type { AuthStorage, ExpectedIdentity } from './identity.js';
 export interface NativeGatewayOptions extends NativeTransportOptions {
-  publicationPolicy?: (() => ProjectionPolicy) | undefined;
+  publicationPolicy?: ((sessionKey?: string) => ProjectionPolicy) | undefined;
   files?: GatewayFiles | undefined;
   fullMessage?: GatewayContext['fullMessage'];
 }
@@ -35,8 +35,8 @@ export class NativeGateway extends GatewayFacade {
   private readonly attachments: NativeAttachments;
   private readonly safe: SafeGatewayProjection;
   constructor(options: NativeGatewayOptions) {
-    const safe = new SafeGatewayProjection(() => {
-      const policy = options.publicationPolicy?.() ?? {
+    const safe = new SafeGatewayProjection((sessionKey) => {
+      const policy = options.publicationPolicy?.(sessionKey) ?? {
         documentsRoots: [],
         publications: [],
       };
@@ -94,6 +94,7 @@ export class NativeGateway extends GatewayFacade {
         mapping,
         await super.history(mapping, options),
       ),
+      mapping.sessionKey,
     );
   }
   override async send(

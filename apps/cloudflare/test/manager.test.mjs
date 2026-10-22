@@ -157,3 +157,46 @@ test('session expiry prevents socket command access even without a revocation no
   assert.equal(result.error.code, 'AUTHENTICATION_REQUIRED');
   await closed;
 });
+
+test('unsupported uploads return correlated 415 and the same socket remains usable', async () => {
+  const session = await login(app);
+  const response = await connect(session);
+  const socket = response.webSocket;
+  socket.accept();
+  try {
+    const commandId = randomUUID();
+    const result = await command(socket, {
+      type: 'upload.begin',
+      commandId,
+      name: 'document.html',
+      mimeType: 'text/html',
+      size: 10,
+    });
+    assert.equal(result.commandId, commandId);
+    assert.equal(result.ok, false);
+    assert.equal(result.error.status, 415);
+    assert.equal(result.error.code, 'UNSUPPORTED_ATTACHMENT');
+    const invalidId = randomUUID();
+    const malformed = await command(socket, {
+      type: 'upload.begin',
+      commandId: invalidId,
+      name: 'document.txt',
+      mimeType: 'text/plain\nprivate',
+      size: 10,
+    });
+    assert.equal(malformed.commandId, invalidId);
+    assert.equal(malformed.error.status, 400);
+    assert.equal(JSON.stringify(malformed).includes('private'), false);
+    const next = await command(socket, {
+      type: 'upload.begin',
+      name: 'document.txt',
+      mimeType: 'text/plain',
+      size: 10,
+    });
+    assert.equal(next.ok, true);
+    assert.equal(typeof next.data.uploadId, 'string');
+    assert.equal(next.data.nextOffset, 0);
+  } finally {
+    socket.close();
+  }
+});

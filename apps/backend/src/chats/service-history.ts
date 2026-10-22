@@ -15,6 +15,7 @@ import { pending } from './service-catalog.js';
 import { mapping, summary } from './service-record.js';
 import { changed, retryRefresh, withLock } from './service-runtime.js';
 import type { ServiceState } from './service-state.js';
+import { locallyUninvoked } from './submission-claims.js';
 export function beginRead(
   ctx: ServiceState,
   id: string,
@@ -157,7 +158,9 @@ export async function refresh(ctx: ServiceState, id: string): Promise<void> {
     const current = ctx.store.getChat(id);
     if (current.status === 'deleting') return Promise.resolve();
     const observed = projectHistory(ctx, id, history);
-    reconcileInputs(ctx.store, id, observed);
+    reconcileInputs(ctx.store, id, observed, (item) =>
+      locallyUninvoked(ctx, item),
+    );
     if (observed.activeRun) {
       const preview = boundedRun(observed.activeRun);
       if (preview) ctx.streams.set(id, preview);

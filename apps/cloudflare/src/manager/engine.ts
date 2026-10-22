@@ -71,8 +71,8 @@ export function createManagerEngine(
       return result.message;
     },
     observe: (frame) => engineFiles.observe(frame),
-    publicationPolicy: () => ({
-      ...files.catalog.policy(),
+    publicationPolicy: (sessionKey) => ({
+      ...files.catalog.policy(sessionKey),
       secrets: [
         ...control.secrets(),
         context.env.R2_ACCESS_KEY_ID ?? '',
@@ -98,6 +98,13 @@ export function createManagerEngine(
         sizeBytes: original.size,
         origin: 'file' as const,
         nativePath: file.path,
+        originalAttachment: {
+          uploadId: original.id,
+          name: original.name,
+          mimeType: original.mimeType,
+          size: original.size,
+        },
+        ...(file.readFiles ? { nativeReadFiles: file.readFiles } : {}),
       };
     });
   });

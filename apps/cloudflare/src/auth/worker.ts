@@ -49,7 +49,11 @@ export default {
       return await route(request, env);
     } catch (error) {
       if (error instanceof AuthError)
-        return json({ code: error.code, detail: error.message }, error.status);
+        return json(
+          { code: error.code, detail: error.message },
+          error.status,
+          error.headers,
+        );
       // Never serialize exceptions, requests, cookies, URLs, or SQL bindings.
       return json(
         {

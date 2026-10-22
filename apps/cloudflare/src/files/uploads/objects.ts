@@ -1,3 +1,4 @@
+import { recoveryObjectUrl } from '../../engine/recovery/origin.js';
 import { AwsClient } from 'aws4fetch';
 import { validateFile } from '../../../../backend/src/uploads/validation.js';
 import { ApplicationError } from '../../../../backend/src/errors.js';
@@ -73,17 +74,7 @@ export class UploadObjects {
       !env.R2_SECRET_ACCESS_KEY
     )
       throw new Error('Attachment signing unavailable');
-    const origin = new URL(env.R2_ORIGIN);
-    if (
-      origin.protocol !== 'https:' ||
-      !/^[a-f0-9]+\.r2\.cloudflarestorage\.com$/.test(origin.hostname) ||
-      origin.origin !== env.R2_ORIGIN
-    )
-      throw new Error('Invalid attachment origin');
-    const url = new URL(
-      `/${env.R2_BUCKET_NAME}/${row.key.split('/').map(encodeURIComponent).join('/')}`,
-      origin,
-    );
+    const url = recoveryObjectUrl(env, row.key);
     url.searchParams.set('X-Amz-Expires', '300');
     const client = new AwsClient({
       accessKeyId: env.R2_ACCESS_KEY_ID,

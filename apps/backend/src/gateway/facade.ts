@@ -14,6 +14,7 @@ import { HistoryOperations } from './history-operations.js';
 import { FileOperations } from './file-operations.js';
 import { SendOperations } from './send-operations.js';
 export class GatewayFacade implements Gateway {
+  readonly nativeAbortProofs = true;
   private readonly modelsApi: ModelOperations;
   private readonly agentsApi: AgentOperations;
   private readonly settingsApi: SettingsOperations;
@@ -124,6 +125,9 @@ export class GatewayFacade implements Gateway {
   }
   abort(mapping: GatewayMapping) {
     return this.sendApi.abort(mapping);
+  }
+  abortRun(mapping: GatewayMapping, runId: string) {
+    return this.sendApi.abort(mapping, runId);
   }
   artifacts(mapping: GatewayMapping) {
     return this.filesApi.artifacts(mapping);
