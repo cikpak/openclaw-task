@@ -3,6 +3,36 @@ import { EngineDriver } from './driver.js';
 
 afterEach(() => vi.useRealTimers());
 
+it('samples live reader diagnostics without invoking the operational pruning predicate', () => {
+  const activeReaders = vi.fn(() => {
+    throw new Error('Operational reader predicate must not run');
+  });
+  const receiver = {
+    context: { store: { listChats: () => [] } },
+    service: {
+      driving: new Map(),
+      steering: new Set(),
+      streams: new Map(),
+      reconciliation: null,
+      locks: new Map(),
+    },
+    gateway: { ready: true },
+    activeReaders,
+    diagnosticActiveReaders: () => true,
+    additionalWork: () => false,
+  };
+  expect(
+    EngineDriver.prototype.sleepActivity.call(
+      receiver as unknown as EngineDriver,
+    ),
+  ).toMatchObject({
+    liveReaders: true,
+    pendingMessages: 0,
+    gatewayReady: true,
+  });
+  expect(activeReaders).not.toHaveBeenCalled();
+});
+
 it('releases native suspension even while application dispatch is intentionally gated', async () => {
   const request = vi.fn(() => Promise.resolve({}));
   const get = vi.fn(() => Promise.resolve('native-suspension'));

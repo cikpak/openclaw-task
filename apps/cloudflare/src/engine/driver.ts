@@ -14,8 +14,10 @@ import { RecoveryObjects } from './recovery/objects.js';
 import { recoveryObjects, type RecoveryDescriptor } from './recovery/types.js';
 import { assertFileIncarnations } from './recovery/incarnations.js';
 import { ensureDirectToolLoading } from './gateway/tool-policy.js';
+import type { SleepActivity, SleepDiagnostics } from './sleep-diagnostics.js';
 
 export class EngineDriver implements LifecycleDriver {
+  sleepDiagnostics?: SleepDiagnostics;
   readonly objects: RecoveryObjects;
   readonly jobs: RecoveryJobs;
   constructor(
@@ -40,6 +42,7 @@ export class EngineDriver implements LifecycleDriver {
   }
   onFailure(phase: LifecyclePhase, error: unknown): void {
     this.control.diagnostics.failure(phase, error);
+    this.sleepDiagnostics?.failure(phase, error);
   }
   async start(bootId: string): Promise<void> {
     this.control.diagnostics.begin(bootId);
@@ -79,6 +82,7 @@ export class EngineDriver implements LifecycleDriver {
         terminalPolicy: 'preserve',
       },
     );
+    this.sleepDiagnostics?.suspension(result);
     const busy = z
       .object({
         status: z.literal('busy'),
@@ -172,6 +176,7 @@ export class EngineDriver implements LifecycleDriver {
   }
   beforeCapture: () => Promise<void> = () => Promise.resolve();
   activeReaders: () => boolean = () => false;
+  diagnosticActiveReaders: () => boolean = () => false;
   canStop(): boolean {
     return !this.activeReaders();
   }
@@ -188,6 +193,29 @@ export class EngineDriver implements LifecycleDriver {
     );
   }
   cancellationRequested: () => boolean = () => false;
+  sleepActivity(): SleepActivity {
+    const chats = this.context.store.listChats();
+    return {
+      liveReaders: this.diagnosticActiveReaders(),
+      fileWork: this.additionalWork(),
+      pendingMessages: chats.reduce(
+        (sum, chat) => sum + this.context.store.pending(chat.id).length,
+        0,
+      ),
+      creatingChats: chats.filter((chat) => chat.status === 'creating').length,
+      deletingChats: chats.filter((chat) => chat.status === 'deleting').length,
+      runningChats: chats.filter((chat) => chat.status === 'running').length,
+      settingsOperations: chats.filter(
+        (chat) => this.context.store.settingsOperation(chat.id) !== null,
+      ).length,
+      driving: this.service.driving.size,
+      steering: this.service.steering.size,
+      streams: this.service.streams.size,
+      reconciliation: this.service.reconciliation !== null,
+      locks: this.service.locks.size,
+      gatewayReady: this.gateway.ready,
+    };
+  }
   async verifyCheckpoint(checkpoint: RecoveryCheckpoint): Promise<void> {
     const refresh = setInterval(() => {
       this.context.state.waitUntil(this.control.attach().catch(() => {}));

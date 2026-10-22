@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import type { LifecycleJob } from '../lifecycle/types.js';
 import type { RecoveryDescriptor, TransferGrant } from './types.js';
 import { setup, complete, capture, descriptor, md5 } from './jobs-fixtures.js';
@@ -154,6 +154,8 @@ it.each(['failed', 'cancelled'] as const)(
   'reports helper %s without initiating an upload',
   async (status) => {
     const f = setup();
+    const diagnostic = vi.fn();
+    f.jobs.diagnostic = diagnostic;
     await f.jobs.start(capture);
     f.states.set(capture.id, {
       operationId: capture.id,
@@ -161,6 +163,29 @@ it.each(['failed', 'cancelled'] as const)(
       status,
     });
     expect((await f.jobs.status(capture.id)).state).toBe(status);
+    expect(diagnostic).toHaveBeenCalledExactlyOnceWith(
+      'capture',
+      'primary',
+      status,
+    );
     expect(f.startJob).toHaveBeenCalledTimes(1);
   },
 );
+it('reports failed upload status separately from primary capture without changing its outcome', async () => {
+  const f = setup();
+  const diagnostic = vi.fn();
+  f.jobs.diagnostic = diagnostic;
+  await f.jobs.start(capture);
+  complete(f);
+  await f.jobs.status(capture.id);
+  f.states.set(`${capture.id}-upload`, {
+    operationId: `${capture.id}-upload`,
+    bootId: capture.bootId,
+    status: 'failed',
+  });
+  expect((await f.jobs.status(capture.id)).state).toBe('failed');
+  expect(diagnostic.mock.calls).toEqual([
+    ['capture', 'primary', 'succeeded'],
+    ['capture', 'upload', 'failed'],
+  ]);
+});

@@ -13,6 +13,7 @@ import { EngineFiles } from '../engine/files/service.js';
 import { UploadMedia } from '../files/uploads/media.js';
 import { pruneCachedSnapshot } from './cached-window.js';
 import { containerFileSecrets } from '../files/secrets.js';
+import { SleepDiagnostics } from '../engine/sleep-diagnostics.js';
 
 /** Engine work belongs to the manager, independently of browser sessions. */
 export function createManagerEngine(
@@ -130,6 +131,12 @@ export function createManagerEngine(
   );
   driver.cancellationRequested = () => lifecycle.state.wantWake;
   driver.activeReaders = () => files.readers.live();
+  driver.diagnosticActiveReaders = () =>
+    !!context.store.db
+      .prepare(
+        'SELECT 1 FROM file_readers WHERE live = 1 AND expires_at > ? LIMIT 1',
+      )
+      .get(Date.now());
   driver.beforeCapture = async () => {
     await engineFiles.audit();
     await files.inputs.audit((mapping, id) =>
@@ -137,6 +144,23 @@ export function createManagerEngine(
     );
   };
   driver.additionalWork = () => engineFiles.busy();
+  const sleepDiagnostics = new SleepDiagnostics();
+  driver.sleepDiagnostics = sleepDiagnostics;
+  driver.jobs.diagnostic = (kind, stage, status) =>
+    sleepDiagnostics.helper(kind, stage, status);
+  // The constructor loaded this phase from durable storage; observe it before any tick changes it.
+  const observeSleep = (loaded = false) => {
+    try {
+      sleepDiagnostics.lifecycle(
+        lifecycle.state,
+        driver.sleepActivity(),
+        loaded,
+      );
+    } catch {
+      /* Diagnostic sampling must not affect engine execution. */
+    }
+  };
+  observeSleep(true);
   driver.onCommit = (descriptor) => files.commit(descriptor);
   files.liveFiles = {
     usable: () =>
@@ -155,7 +179,9 @@ export function createManagerEngine(
     readInput: (mapping, id) => engineFiles.readInput(mapping, id),
   };
   const tick = async () => {
+    observeSleep();
     await lifecycle.tick();
+    observeSleep();
     if (lifecycle.ready && !service.reconciled) {
       await materializeChats(context.store, gateway, service);
       await service.reconcile();

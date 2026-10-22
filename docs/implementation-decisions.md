@@ -167,3 +167,10 @@ Validation includes actual Workers/D1/R2 upload and download admission, delayed 
   Visibility, a non-null box and the 44px width/height requirement remain; actual
   Chromium regressions prove 43.99px and 43px controls still fail. This changes
   test precision only, with no production CSS or application change.
+
+- Add bounded structural sleep diagnostics after a production capture failure
+  left the container running. Log the loaded durable phase before any tick,
+  finite busy counters, native suspend blocker counts and helper capture/upload
+  status. Emit no native text, identifiers, paths, object keys or raw errors.
+  Repeated observations are throttled; execution, shutdown gates and the pinned
+  container image remain unchanged. Diagnose before selecting a repair.

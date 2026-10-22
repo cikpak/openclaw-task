@@ -29,6 +29,8 @@ interface CompositeJob {
 }
 /** Durable composition makes helper start/status idempotent across DO recreation. */
 export class RecoveryJobs {
+  diagnostic: (kind: unknown, stage: unknown, status: unknown) => void =
+    () => {};
   constructor(
     private readonly context: EngineContext,
     private readonly container: PrivateContainer,
@@ -119,6 +121,7 @@ export class RecoveryJobs {
       };
     if (record.cancelled) {
       const result = await this.container.job(operationId);
+      this.diagnostic(job.kind, record.stage, result.status);
       if (result.bootId !== job.bootId || result.operationId !== operationId)
         throw new Error('Stale private operation result');
       if (result.status !== 'running') {
@@ -133,7 +136,9 @@ export class RecoveryJobs {
     let result;
     try {
       result = await this.container.job(operationId);
+      this.diagnostic(job.kind, record.stage, result.status);
     } catch {
+      this.diagnostic(job.kind, record.stage, 'unavailable');
       await this.sendPrimary(record);
       return { ...job, state: 'running' };
     }
