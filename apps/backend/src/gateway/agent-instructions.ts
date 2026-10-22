@@ -15,7 +15,6 @@ import {
   ValidationError,
 } from '../errors.js';
 import type { GatewayMapping } from './types.js';
-import { withDeliverableInstructions } from './deliverable-instructions.js';
 
 type Request = (
   method: string,
@@ -149,31 +148,6 @@ export class AgentInstructions {
   }
   async read(mapping: GatewayMapping): Promise<AgentBehavior> {
     return parseAgentInstructions((await this.file(mapping)).content).behavior;
-  }
-  async ensureDeliverables(mapping: GatewayMapping): Promise<void> {
-    const before = await this.file(mapping);
-    const content = withDeliverableInstructions(
-      before.content,
-      parseAgentInstructions(before.content),
-    );
-    if (content === before.content) return;
-    if (new TextEncoder().encode(content).byteLength > MAX_FILE_BYTES)
-      throw new ValidationError(
-        'The agent instructions file is too large to update safely.',
-      );
-    await this.request('agents.files.set', {
-      agentId: mapping.agentId,
-      name: 'AGENTS.md',
-      content,
-      ...(before.missing
-        ? { expectedMissing: true }
-        : { expectedHash: before.hash }),
-    });
-    if ((await this.file(mapping)).content !== content)
-      throw new ConflictError(
-        'AGENT_INSTRUCTIONS_UNCONFIRMED',
-        'The file-sharing instructions could not be confirmed. Refresh before trying again.',
-      );
   }
   async apply(
     mapping: GatewayMapping,

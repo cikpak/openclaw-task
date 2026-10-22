@@ -45,7 +45,12 @@ export async function submit(
     const attachments = item.attachments.length
       ? await ctx.media?.payload(item.attachments, chat.settings, mapping(chat))
       : undefined;
-    await ctx.gateway.prepareSend?.(mapping(chat));
+    const prepared = (await ctx.gateway.prepareSend?.(
+      mapping(chat),
+      submissionId,
+      item.text,
+      attachments ?? [],
+    )) ?? { text: item.text, attachments };
     const invocation = await withLock(ctx, id, () => {
       if (ctx.closed) return Promise.resolve(null);
       const pending = owned();
@@ -86,9 +91,9 @@ export async function submit(
         ack: ctx.gateway.send(
           mapping(current),
           submissionId,
-          pending.text,
+          prepared.text,
           behavior,
-          attachments,
+          prepared.attachments,
         ),
       });
     });

@@ -90,10 +90,11 @@ async function fixture(
     });
   else
     Object.assign(gateway, {
-      prepareSend: async (scope: typeof target) => {
+      prepareSend: async (scope: typeof target, _id: string, text: string) => {
         expect(scope).toEqual(target);
         await latch.wait();
         if (failPreparation) throw new Error('late guidance failure');
+        return { text: text + '\nPrivate per-turn context.', attachments: [] };
       },
     });
   const command = {
@@ -151,6 +152,24 @@ async function fixture(
 }
 
 describe('submission ownership at the Gateway invocation boundary', () => {
+  it('sends prepared native context while preserving original durable pending text and identity', async () => {
+    const f = await fixture('guidance');
+    expect(f.service.pending(f.chat.id)[0]?.text).toBe('suspended');
+    await f.finish();
+    expect(f.gateway.sends).toEqual([
+      {
+        id: f.command.commandId,
+        text: 'suspended\nPrivate per-turn context.',
+        mapping: f.target,
+      },
+    ]);
+    expect(f.service.pending(f.chat.id)[0]).toMatchObject({
+      id: f.command.commandId,
+      text: 'suspended',
+      submissionId: f.command.commandId,
+      state: 'submitted',
+    });
+  });
   // Value: steer-to-queue fallback retains every accepted input without overflowing snapshots.
   // Regression: 42 suspended steers became pending and escaped the public 41-item display bound.
   it('bounds disconnected steer fallback while retaining and later dispatching all durable inputs', async () => {

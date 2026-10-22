@@ -97,26 +97,13 @@ export class NativeGateway extends GatewayFacade {
       mapping.sessionKey,
     );
   }
-  override async send(
+  prepareSend(
     mapping: GatewayMapping,
     id: string,
     text: string,
-    behavior: 'queue' | 'steer',
     attachments: GatewayAttachment[] = [],
   ) {
-    const prepared = await this.attachments.prepare(
-      mapping,
-      id,
-      text,
-      attachments,
-    );
-    return super.send(
-      mapping,
-      id,
-      prepared.text,
-      behavior,
-      prepared.attachments,
-    );
+    return this.attachments.prepare(mapping, id, text, attachments);
   }
   // Browser file transfer is provided only by the authenticated helper publication layer.
   override async artifacts(mapping: GatewayMapping) {

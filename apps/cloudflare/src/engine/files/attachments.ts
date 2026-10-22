@@ -5,7 +5,8 @@ import type {
 } from '../../../../backend/src/gateway/types.js';
 import type { AuthStorage } from '../gateway/identity.js';
 import type { Attachment } from '@messenger/contracts';
-/** Private helper paths become native input, while the exact generated suffix stays out of UI history. */
+import { DELIVERY_GUIDANCE } from './delivery-guidance.js';
+/** Private turn context and helper paths stay out of browser history via exact persisted suffixes. */
 export class NativeAttachments {
   private tail = Promise.resolve();
   constructor(private readonly storage: AuthStorage) {}
@@ -16,7 +17,6 @@ export class NativeAttachments {
     attachments: GatewayAttachment[],
   ) {
     const local = attachments.filter((file) => file.nativePath);
-    if (!local.length) return { text, attachments };
     for (const file of local) {
       const root =
         file.nativePath?.slice(0, file.nativePath.lastIndexOf('/') + 1) ?? '';
@@ -52,7 +52,7 @@ export class NativeAttachments {
       const marker = existing?.marker ?? crypto.randomUUID();
       suffix =
         existing?.suffix ??
-        `\n\n[messenger-attachments:${marker}]\nThe user attached these files for this conversation. Use the read tool to inspect them (including images) before answering. Do not expose local paths or internal companion names.\n${local
+        `\n\n[messenger-attachments:${marker}]\n${DELIVERY_GUIDANCE}\n${local.length ? 'The user attached these files for this conversation. Use the read tool to inspect them (including images) before answering. Do not expose local paths or internal companion names.\n' : ''}${local
           .map((file) => file.nativeReadNote ?? '')
           .filter(Boolean)
           .join(
@@ -97,30 +97,37 @@ export class NativeAttachments {
   ): Promise<GatewayHistory> {
     const messages = [];
     for (const message of history.messages) {
-      const match =
+      let projected = message;
+      const matches =
         message.role === 'user'
-          ? /\n\n\[messenger-attachments:([a-f0-9-]{36})\]/.exec(message.text)
-          : null;
-      const record = match
-        ? await this.storage.get<{
-            suffix: string;
-            submissionId: string;
-            attachments?: Attachment[];
-          }>(`attachment-marker:${mapping.sessionKey}:${match[1]}`)
-        : undefined;
-      messages.push(
-        record &&
+          ? [
+              ...message.text.matchAll(
+                /\n\n\[messenger-attachments:([a-f0-9-]{36})\]/g,
+              ),
+            ].reverse()
+          : [];
+      for (const match of matches) {
+        const record = await this.storage.get<{
+          suffix: string;
+          submissionId: string;
+          attachments?: Attachment[];
+        }>(`attachment-marker:${mapping.sessionKey}:${match[1]}`);
+        if (
+          record &&
           (!message.runId || message.runId === record.submissionId) &&
           message.text.endsWith(record.suffix)
-          ? {
-              ...message,
-              text: message.text.slice(0, -record.suffix.length),
-              ...(record.attachments?.length
-                ? { attachments: record.attachments }
-                : {}),
-            }
-          : message,
-      );
+        ) {
+          projected = {
+            ...message,
+            text: message.text.slice(0, -record.suffix.length),
+            ...(record.attachments?.length
+              ? { attachments: record.attachments }
+              : {}),
+          };
+          break;
+        }
+      }
+      messages.push(projected);
     }
     return { ...history, messages };
   }

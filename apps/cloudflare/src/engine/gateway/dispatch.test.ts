@@ -9,7 +9,7 @@ import { ChatService } from '../../../../backend/src/chats/service.js';
 import { enqueue } from '../../../../backend/src/chats/queue.js';
 import { settingsSchema } from '../../../../backend/src/schemas.js';
 import { nativeAgentFileRequest } from '../../../../backend/test/native-agent-files.js';
-import { DELIVERABLE_INSTRUCTIONS } from '../../../../backend/src/gateway/deliverable-instructions.js';
+import { DELIVERY_GUIDANCE } from '../files/delivery-guidance.js';
 import { NativeGateway, type AuthStorage } from './native.js';
 
 type Options = ConstructorParameters<
@@ -19,6 +19,7 @@ const mock = vi.hoisted(() => ({
   clients: [] as Options[],
   calls: [] as { method: string; params: unknown }[],
   files: new Map<string, string>(),
+  rows: new Map<string, unknown>(),
 }));
 vi.mock('@openclaw/gateway-client/browser', async (importOriginal) => {
   const actual = await importOriginal<typeof SDK>();
@@ -67,7 +68,12 @@ vi.mock('@openclaw/gateway-client/browser', async (importOriginal) => {
             nativeAgentFileRequest(mock.files, method, params),
           );
         if (method === 'chat.send') {
-          expect(mock.files.get('a')).toBe(DELIVERABLE_INSTRUCTIONS);
+          expect((params as { message: string }).message).toContain(
+            DELIVERY_GUIDANCE,
+          );
+          expect(mock.rows.has('attachment-appendix:agent:a:main:new')).toBe(
+            true,
+          );
           return Promise.resolve({
             runId: (params as { idempotencyKey: string }).idempotencyKey,
             status: 'started',
@@ -95,10 +101,11 @@ afterEach(async () => {
   mock.clients.length = 0;
   mock.calls.length = 0;
   mock.files.clear();
+  mock.rows.clear();
 });
 
 it('native terminal events cannot dispatch accepted work across suspension while manager acceptance remains durable', async () => {
-  const rows = new Map<string, unknown>();
+  const rows = mock.rows;
   const storage: AuthStorage = {
     get: <T>(key: string) => Promise.resolve(rows.get(key) as T | undefined),
     put: (key, value) => {
@@ -183,6 +190,7 @@ it('native terminal events cannot dispatch accepted work across suspension while
   await service.drain();
   expect(mock.calls.filter((call) => call.method === 'chat.send')).toEqual([]);
   expect(mock.files.size).toBe(0);
+  expect(rows.has('attachment-appendix:agent:a:main:new')).toBe(false);
   expect(store.pending('chat').map((item) => item.id)).toEqual(['old', 'new']);
   expect(store.pending('chat').find((item) => item.id === 'new')?.state).toBe(
     'pending',
@@ -201,19 +209,10 @@ it('native terminal events cannot dispatch accepted work across suspension while
     ).toHaveLength(1),
   );
   await service.drain();
-  const write = mock.calls.findIndex(
-    (call) => call.method === 'agents.files.set',
+  expect(mock.calls.some((call) => call.method === 'agents.files.set')).toBe(
+    false,
   );
-  const sent = mock.calls.findIndex((call) => call.method === 'chat.send');
-  expect(write).toBeGreaterThanOrEqual(0);
-  expect(sent).toBeGreaterThan(write);
-  expect(
-    mock.calls
-      .slice(write + 1, sent)
-      .some((call) => call.method === 'agents.files.get'),
-  ).toBe(true);
-  expect(mock.calls[write]?.params).toMatchObject({ expectedMissing: true });
-  expect(mock.files.get('a')).toBe(DELIVERABLE_INSTRUCTIONS);
+  expect(rows.has('attachment-appendix:agent:a:main:new')).toBe(true);
   expect(store.pending('chat').map((item) => item.id)).toEqual(['new']);
   expect(store.pending('chat')[0]?.state).toBe('submitted');
   expect(

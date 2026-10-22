@@ -44,7 +44,7 @@ it('keeps derived PDF reads private and strips their complete persisted appendix
     [file],
   );
   expect(prepared.attachments).toEqual([]);
-  expect(prepared.text.length).toBeLessThan(1500);
+  expect(prepared.text.length).toBeLessThan(3000);
   const line = prepared.text.split('\n').find((line) => line.startsWith('{'))!;
   expect(JSON.parse(line)).toEqual({
     name: 'Original.pdf (document text)',

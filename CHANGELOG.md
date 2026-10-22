@@ -4,9 +4,9 @@
 
 ### Cloudflare issue repairs
 
-- Teach existing and new agents to save user deliverables in `documents/` through
-  verified native tools before dispatch, preserving custom instructions and the
-  private workspace publication boundary.
+- Include durable file-sharing guidance with each native message so existing and
+  new agents save deliverables in `documents/`. Keep preparation before the Stop
+  fence and hide the exact private context from public history.
 - Activate the supported direct Codex tool-loading configuration before dispatch,
   preserving the model, tool permissions and unrelated restored configuration.
 - Retain exact native Stop acknowledgements across delayed history visibility and

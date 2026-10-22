@@ -21,21 +21,19 @@ export class GatewayFacade implements Gateway {
   private readonly historyApi: HistoryOperations;
   private readonly filesApi: FileOperations;
   private readonly sendApi: SendOperations;
-  private readonly instructions: AgentInstructions;
   protected readonly listeners = new Set<GatewayEventListener>();
   constructor(
     protected readonly transport: GatewayTransport,
     files: GatewayFiles,
     fullMessage?: GatewayContext['fullMessage'],
   ) {
-    this.instructions = new AgentInstructions((method, params) =>
-      this.request(method, params),
-    );
     const context: GatewayContext = {
       transport,
       workspace: files,
       fullMessage,
-      instructions: this.instructions,
+      instructions: new AgentInstructions((method, params) =>
+        this.request(method, params),
+      ),
       knownSettings: new Map(),
       verifiedModels: new Map(),
       capabilityGeneration: 0,
@@ -115,9 +113,6 @@ export class GatewayFacade implements Gateway {
     options: { cursor?: string; inputRunIds?: string[] } = {},
   ) {
     return this.historyApi.history(mapping, options);
-  }
-  prepareSend(mapping: GatewayMapping) {
-    return this.instructions.ensureDeliverables(mapping);
   }
   send(
     mapping: GatewayMapping,
