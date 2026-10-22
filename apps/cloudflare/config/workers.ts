@@ -18,7 +18,7 @@ export const backend = defineWorker({
   observability: telemetry,
   env: {
     AUTH_DB: bindings.d1({
-      id: '86700fa1-5910-4fa6-8f79-f6c544e8b206',
+      id: '7b6513f3-6679-4642-b700-ceb187b3430a',
       name: 'openclaw-messenger-auth',
     }),
     MANAGER: bindings.worker({ worker: 'openclaw-messenger-manager' }),

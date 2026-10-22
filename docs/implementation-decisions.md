@@ -174,3 +174,9 @@ Validation includes actual Workers/D1/R2 upload and download admission, delayed 
   status. Emit no native text, identifiers, paths, object keys or raw errors.
   Repeated observations are throttled; execution, shutdown gates and the pinned
   container image remain unchanged. Diagnose before selecting a repair.
+
+- The user explicitly authorized a production factory reset, including all app
+  data. Recreate the Workers, Durable Object namespace, container application and
+  auth database, and empty the recovery bucket. Keep the existing application
+  resource names, bind the new auth database ID in active configuration, and
+  retain historical decisions without rewriting their former resource IDs.
