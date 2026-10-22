@@ -14,15 +14,13 @@ const file = {
   updatedAt: 1,
 };
 it('downloads a bare prose publication reference without rewriting URLs or code examples', async () => {
-  const dispatch = vi
-    .fn()
-    .mockResolvedValue({
-      file,
-      download: {
-        url: `/downloads/${'d'.repeat(64)}`,
-        expiresAt: Date.now() + 60000,
-      },
-    });
+  const dispatch = vi.fn().mockResolvedValue({
+    file,
+    download: {
+      url: `/downloads/${'d'.repeat(64)}`,
+      expiresAt: Date.now() + 60000,
+    },
+  });
   registerApplicationDispatcher(dispatch);
   const click = vi
     .spyOn(HTMLAnchorElement.prototype, 'click')
