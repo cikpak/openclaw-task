@@ -58,6 +58,15 @@ cannot establish the exact historical cause. Final branch-head CI is tracked on
 [PR 1](https://github.com/cikpak/openclaw-task/pull/1). Later cleanup-script and
 documentation commits do not alter the deployed application or helper bytes.
 
+The subsequent `87c2ccf` Linux checks passed 1,092 core tests and the complete
+native suite. Its push acceptance passed every stage including cleanup. The PR
+acceptance passed all product stages but retained only known Docker
+removal-in-progress at the thirty-second deadline; the successful run settled near
+29.5 seconds. The test-only window now permits sixty seconds for those known
+responses, with a 30.25-second success regression and persistent-at-sixty failure
+regression. All seventy-four focused acceptance-unit tests pass; command timeouts,
+unknown failures and final absence/port/baseline proofs remain unchanged.
+
 ## Historical phase and deployment evidence
 
 Earlier failed attempts and phase results below remain historical; their pending

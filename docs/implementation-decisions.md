@@ -151,3 +151,10 @@ Validation includes actual Workers/D1/R2 upload and download admission, delayed 
   Safe finite error categories are retained because the original discarded
   Docker stderr cannot prove the historical cause. This changes test cleanup
   only; the deployed a65 application and helper artifacts remain unchanged.
+
+- Actual CI proved a teardown deadline boundary: the 87c2ccf push aggregate passed,
+  settling Docker removal near 29.5 seconds, while the PR aggregate passed every
+  product stage but still observed only removal-in-progress at 30 seconds. Allow
+  sixty seconds for those classified test-only responses, keeping the fifteen
+  second command timeout, all permanent errors and final absence checks unchanged.
+  Regression coverage includes success at 30.25 seconds and failure at sixty.

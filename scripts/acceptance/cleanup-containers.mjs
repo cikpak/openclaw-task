@@ -28,7 +28,7 @@ export async function cleanupContainers(
 ) {
   const prefix = `workerd-openclaw-local-${namespace}-manager-ConversationManager-`;
   const { delay, now } = effects;
-  const deadline = now() + 30_000;
+  const deadline = now() + 60_000;
   const observe = (step, error) => {
     const category = dockerFailure(error);
     if (result.dockerObservations.length < 64)

@@ -60,7 +60,8 @@ function fixture(mode) {
         present = false;
         throw daemon('Error response from daemon: permission denied');
       }
-      if (mode === 'stuck' || time < 750) throw progress();
+      if (mode === 'stuck' || time < (mode === 'slow-settles' ? 30_250 : 750))
+        throw progress();
       present = false;
       return { stdout: '' };
     },
@@ -93,6 +94,24 @@ test('Docker asynchronous removal settles beyond two immediate passes and still 
   assert.equal(f.calls.filter((args) => args[0] === 'rm').length, 4);
   assert.equal(f.calls.filter((args) => args[0] === 'inspect').length, 4);
 });
+test('known Docker removal just beyond thirty seconds settles without relaxing final cleanup proofs', async () => {
+  const f = fixture('slow-settles');
+  const result = await cleanup(f);
+  assert.equal(f.time(), 30_250);
+  assert.equal(result.ownedAbsent, true);
+  assert.equal(result.preexistingStillRunning, true);
+  assert.deepEqual(
+    result.portsClosed.map((port) => port.closed),
+    [true, true],
+  );
+  assert.deepEqual(result.cleanupFailureSteps, []);
+  assert.equal(result.dockerObservations.length, 64);
+  assert.ok(
+    result.dockerObservations.every(
+      (row) => row.category === 'removal-in-progress',
+    ),
+  );
+});
 for (const mode of ['missing-inspect', 'missing-remove'])
   test(`${mode} concurrent Miniflare deletion is accepted only after final absence`, async () => {
     const f = fixture(mode);
@@ -120,7 +139,7 @@ test('permanent Docker failure stays visible even when a later inventory is empt
 test('removal still in progress at bounded deadline fails, preserves baseline and writes finite evidence', async () => {
   const f = fixture('stuck');
   await assert.rejects(cleanup(f), AggregateError);
-  assert.equal(f.time(), 30_000);
+  assert.equal(f.time(), 60_000);
   assert.equal(f.evidence().ownedAbsent, false);
   assert.deepEqual(f.evidence().cleanupFailureSteps, [
     'owned-still-present-or-unknown',
@@ -128,7 +147,7 @@ test('removal still in progress at bounded deadline fails, preserves baseline an
   assert.equal(f.evidence().preexistingStillRunning, true);
   assert.equal(f.evidence().portsClosed.length, 2);
   assert.equal(f.evidence().dockerObservations.length, 64);
-  assert.ok(f.calls.filter((args) => args[0] === 'rm').length < 125);
+  assert.ok(f.calls.filter((args) => args[0] === 'rm').length < 245);
 });
 test('only exact daemon categories qualify; timeout, permission and lookalikes never acquire transient status', () => {
   assert.equal(dockerFailure(progress()), 'removal-in-progress');
