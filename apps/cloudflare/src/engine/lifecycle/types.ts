@@ -76,6 +76,8 @@ export interface LifecycleState {
   jobStartedAt: number | null;
   idleSince: number | null;
   retryAt: number;
+  /** Fixed grace period after platform start for the helper listener to open. */
+  helperReadyDeadline?: number;
   leaseUntil: number;
   nextAt: number | null;
   failure: 'save' | 'wake' | 'missing-checkpoint' | null;

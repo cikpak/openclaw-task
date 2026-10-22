@@ -1,22 +1,52 @@
 import type { DurableLifecycle } from './index.js';
 
+async function inspectStartingContainer(core: DurableLifecycle) {
+  try {
+    return await core.driver.inspect();
+  } catch (error) {
+    const deadline = core.state.helperReadyDeadline;
+    if (deadline !== undefined && core.now() < deadline) {
+      await core.schedule(Math.min(core.now() + 1000, deadline));
+      return null;
+    }
+    delete core.state.helperReadyDeadline;
+    throw error;
+  }
+}
+
 export async function wakeStep(core: DurableLifecycle): Promise<void> {
   const { state, driver } = core;
   if (state.phase === 'asleep') {
     if (!state.wantWake) return core.schedule(null);
     state.bootId = crypto.randomUUID();
     state.attemptId = crypto.randomUUID();
+    delete state.helperReadyDeadline;
     core.move('waking');
     return;
   }
   if (state.phase === 'waking') {
     // Inspect before start: a persisted wake may refer to a disk that already exists.
-    let container = await driver.inspect();
+    let container = await inspectStartingContainer(core);
+    if (!container) return;
     if (!container.running) {
+      if (
+        state.helperReadyDeadline !== undefined &&
+        core.now() >= state.helperReadyDeadline
+      ) {
+        delete state.helperReadyDeadline;
+        throw new Error('Private engine helper unavailable');
+      }
       await driver.start(state.bootId!);
-      container = await driver.inspect();
+      // Platform running precedes the helper listener. Preserve a bounded
+      // readiness window across manager recreation instead of a 30-second
+      // failure backoff after the first refused request.
+      state.helperReadyDeadline ??= core.now() + 60_000;
+      core.repository.save(state);
+      container = await inspectStartingContainer(core);
+      if (!container) return;
       if (!container.running) return core.schedule(core.now() + 1000);
     }
+    delete state.helperReadyDeadline;
     await driver.attach();
     if (container.bootId && container.bootId !== state.bootId) {
       // A boot different from the persisted attempt has lost its original local disk.
