@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Store } from '../database.js';
+import type { Store } from '../storage/store.js';
 import { commandSchema, resultSchema } from '../schemas.js';
 import { uploadResponseSchema } from './schemas.js';
 

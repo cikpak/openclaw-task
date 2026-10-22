@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { sha256 } from '../portable/sha256.js';
 import { z } from 'zod';
 import {
   agentBehaviorEqual,
@@ -139,10 +139,9 @@ export class AgentInstructions {
     if (
       file.content === undefined ||
       !file.hash ||
-      Buffer.byteLength(file.content) > MAX_FILE_BYTES ||
+      new TextEncoder().encode(file.content).byteLength > MAX_FILE_BYTES ||
       (file.size ?? 0) > MAX_FILE_BYTES ||
-      createHash('sha256').update(file.content).digest('hex') !==
-        file.hash.toLowerCase()
+      sha256(file.content) !== file.hash.toLowerCase()
     )
       throw new GatewayUnavailableError();
     return { content: file.content, hash: file.hash, missing: false as const };
@@ -168,7 +167,7 @@ export class AgentInstructions {
         : before.content.slice(0, parsed.start) +
           block +
           before.content.slice(parsed.end);
-    if (Buffer.byteLength(content) > MAX_FILE_BYTES)
+    if (new TextEncoder().encode(content).byteLength > MAX_FILE_BYTES)
       throw new ValidationError(
         'The agent instructions file is too large to update safely.',
       );

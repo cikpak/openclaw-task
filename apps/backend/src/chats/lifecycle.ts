@@ -3,10 +3,10 @@ import type {
   ConversationEvent,
   SettingsOperation,
 } from '@messenger/contracts';
-import type { ChatRecord, Store } from '../database.js';
+import type { ChatRecord, Store } from '../storage/store.js';
 import type { Gateway, GatewayHistory } from '../gateway/types.js';
 import { ConflictError } from '../errors.js';
-import { mapping } from './service.js';
+import { mapping } from './service-record.js';
 import { reconcileInputs } from './queue.js';
 import { historyWithReceipts } from './history.js';
 export interface LifecycleContext {

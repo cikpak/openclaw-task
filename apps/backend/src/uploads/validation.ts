@@ -1,4 +1,3 @@
-import { TextDecoder } from 'node:util';
 import { ApplicationError, ValidationError } from '../errors.js';
 
 export const FILE_LIMIT = 5 * 1024 * 1024;

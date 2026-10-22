@@ -4,23 +4,21 @@ import type {
   PendingMessage,
   SettledRun,
 } from '@messenger/contracts';
-import { createHash } from 'node:crypto';
+import { sha256 } from '../portable/sha256.js';
 import { z } from 'zod';
-import type { Store } from '../database.js';
+import type { Store } from '../storage/store.js';
 import { pendingSchema } from '../schemas.js';
 export const STREAM_PREVIEW_LIMIT = 256 * 1024;
 /** Retain content fingerprints, not canonical bodies or mutable observation metadata. */
 function contentFingerprint(message: Message): string {
-  return createHash('sha256')
-    .update(
-      JSON.stringify([
-        message.role,
-        message.text,
-        message.attachments ?? [],
-        message.artifacts ?? [],
-      ]),
-    )
-    .digest('hex');
+  return sha256(
+    JSON.stringify([
+      message.role,
+      message.text,
+      message.attachments ?? [],
+      message.artifacts ?? [],
+    ]),
+  );
 }
 /** Terminal text is presentation only, never executable or canonical. */
 export class SettledRunProjection {

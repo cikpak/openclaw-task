@@ -1,7 +1,7 @@
 import type { ChatSettings, Preferences } from '@messenger/contracts';
 import { DEFAULT_AGENT_BEHAVIOR } from '@messenger/contracts';
 import { z } from 'zod';
-import type { Store } from '../database.js';
+import type { Store } from '../storage/store.js';
 import type { Gateway, GatewayMapping } from '../gateway/types.js';
 import { ApplicationError } from '../errors.js';
 import { preferencesSchema } from '../schemas.js';

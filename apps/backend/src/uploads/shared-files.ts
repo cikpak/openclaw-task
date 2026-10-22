@@ -1,14 +1,13 @@
-import type Database from 'better-sqlite3';
 import type { Attachment, PendingMessage } from '@messenger/contracts';
 import { z } from 'zod';
-import type { Store } from '../database.js';
+import type { SqlDatabase, Store } from '../storage/store.js';
 import type { Gateway } from '../gateway/types.js';
 import { GatewayUnavailableError, NotFoundError } from '../errors.js';
 import { historyWithReceipts } from '../chats/history.js';
 import { uploadResponseSchema } from './schemas.js';
 import { backfillSharedFiles } from './shared-files-backfill.js';
 
-export function initializeSharedFiles(db: Database.Database): void {
+export function initializeSharedFiles(db: SqlDatabase): void {
   db.exec(`CREATE TABLE IF NOT EXISTS shared_input_files (
     chat_id TEXT NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
     message_id TEXT NOT NULL, upload_id TEXT NOT NULL, owner TEXT NOT NULL,
@@ -18,10 +17,7 @@ export function initializeSharedFiles(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS shared_input_files_chat ON shared_input_files(chat_id,created_at);`);
 }
 /** This ledger stores metadata only and never participates in temporary byte retention. */
-export function trackInputFiles(
-  db: Database.Database,
-  item: PendingMessage,
-): void {
+export function trackInputFiles(db: SqlDatabase, item: PendingMessage): void {
   // Fake media providers need not own the real upload table.
   if (
     !db
@@ -86,7 +82,7 @@ export function trackInputFiles(
   ).run(item.chatId, item.chatId);
 }
 export function removeInputFiles(
-  db: Database.Database,
+  db: SqlDatabase,
   item: PendingMessage,
   outcome: 'removed' | 'consumed' | 'cancelled',
 ): void {

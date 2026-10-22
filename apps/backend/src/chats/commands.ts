@@ -7,14 +7,14 @@ import type {
   PendingMessage,
   Preferences,
 } from '@messenger/contracts';
-import type { Store } from '../database.js';
+import type { Store } from '../storage/store.js';
 import type { Gateway, GatewayHistory } from '../gateway/types.js';
 import {
   ConflictError,
   GatewayUnavailableError,
   NotFoundError,
 } from '../errors.js';
-import { mapping } from './service.js';
+import { mapping } from './service-record.js';
 import { historyWithReceipts } from './history.js';
 import { boundedRun } from './projection.js';
 import { editable, enqueue, requireContent, reconcileInputs } from './queue.js';

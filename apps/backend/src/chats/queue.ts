@@ -4,7 +4,7 @@ import type {
   ConversationCommand,
   PendingMessage,
 } from '@messenger/contracts';
-import type { Store } from '../database.js';
+import type { Store } from '../storage/store.js';
 import type {
   GatewayAttachment,
   GatewayHistory,
