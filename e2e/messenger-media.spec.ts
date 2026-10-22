@@ -64,7 +64,7 @@ test('uploads reach the real model, private tools stay hidden and image inputs r
     panel.getByText('image-fixture.png', { exact: false }),
   ).toBeVisible();
   const image = panel.getByRole('button', {
-    name: 'image-fixture.png',
+    name: 'Download image-fixture.png (1 KB)',
     exact: true,
   });
   await mobileTarget(page, image);
