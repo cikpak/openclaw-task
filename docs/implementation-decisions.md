@@ -143,3 +143,11 @@ Validation includes actual Workers/D1/R2 upload and download admission, delayed 
   dispatch. Tool permissions and model selection remain unchanged. Unapplied
   configuration stays fenced; no automatic non-CAS plugin reload can apply an
   unrelated concurrent revision.
+
+- Test teardown permits only exact code-1 Docker removal-in-progress/not-found
+  responses to settle before a fresh final absence proof. Every removal still
+  checks the unique owned namespace; permanent/unknown/timeout errors remain
+  fatal, and ports plus unrelated-container preservation remain mandatory.
+  Safe finite error categories are retained because the original discarded
+  Docker stderr cannot prove the historical cause. This changes test cleanup
+  only; the deployed a65 application and helper artifacts remain unchanged.

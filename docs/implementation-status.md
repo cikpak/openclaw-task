@@ -2,14 +2,21 @@
 
 ## Cloudflare implementation — 2026-10-22
 
-All five implementation phases are committed, and the manual Cloudflare deployment
-is available at <https://openclaw-messenger.pages.dev>. Release acceptance remains
-incomplete: real chat replies work, but file verification and Stop/restart checks
-have unresolved failures. The
-[current release record](release-verification.md) owns present pass/fail/deployment
-status. Replacement OpenAI credentials passed private model-list validation;
-bounded direct paid inference also passed. The public real-provider application
-cycle remains pending. See [current architecture](architecture.md) and [operations](operations.md).
+All five implementation phases are committed. The repaired immutable production
+revision `a65dc7f125827904d442620fcb9cde01e13ce56a` is available at
+<https://openclaw-messenger.pages.dev>. Actual GPT-5 tool execution created a file;
+its exact bytes downloaded with zero active engine instances. A later send
+restored the same conversation, original memory, file and effective settings;
+the saved native transcript independently confirms a successful read tool call.
+
+Full local and CI application stages passed, including thirty desktop/mobile
+browser cases, recovery, Stop, restart and ten-agent capacity. Their original
+aggregate exits remain failed because test-container removal failed. A separate
+bounded exact-owned teardown repair passed seventy-three acceptance-unit tests;
+final branch-head CI must be read on [PR 1](https://github.com/cikpak/openclaw-task/pull/1).
+The [current release record](release-verification.md) separates these outcomes and
+retains the earlier failures. See [current architecture](architecture.md) and
+[operations](operations.md).
 
 The records below are **historical evidence for the earlier topology**. Their
 commands, unresolved publication status and deployment details do not describe

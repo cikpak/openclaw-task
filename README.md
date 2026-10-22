@@ -27,10 +27,11 @@ pnpm build
 
 [Testing](docs/testing.md) separates application tests, actual Workers-runtime
 checks, real pinned native SDK/helper recovery and provider-dependent release
-verification. [Release evidence](docs/release-verification.md) records the current
-boundary: replacement OpenAI credentials passed private model-list validation;
-a bounded direct paid inference also passed; public application execution and
-the complete production release cycle remain pending.
+verification. [Release evidence](docs/release-verification.md) records the manual
+production deployment and actual GPT-5 file creation, download while the engine
+is stopped, fresh restore and continuation of the same conversation. Cold startup
+can take several minutes; accepted sends remain durable during that wait. Final
+branch CI is available on [PR 1](https://github.com/cikpak/openclaw-task/pull/1).
 
 ## Behavior and limits
 

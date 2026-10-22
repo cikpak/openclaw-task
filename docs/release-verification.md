@@ -1,11 +1,67 @@
 # Release verification
 
-## Current evidence boundary — 2026-10-22
+## Current repaired deployment — 2026-10-22
 
-The manual production deployment is live at
-<https://openclaw-messenger.pages.dev>. See the current production results below;
-the earlier phase counts are historical. This is a testable deployment, not a
-complete release acceptance pass.
+The manual immutable production revision
+`a65dc7f125827904d442620fcb9cde01e13ce56a` is live at
+<https://openclaw-messenger.pages.dev>. Manager version
+`3ec9963d-c483-4dfc-824b-6a1b411b685b`, Backend version
+`27147bd3-f71b-422e-acf4-942ab469646b` and Pages deployment `1dd1bd21`
+were deployed locally, with container rollout `none`. CI performs checks only.
+Public HTML, JavaScript and CSS hashes match the immutable artifact. The release
+image's RootFS and configuration match the physically tested helper image; seven
+native transformations and both companion hashes were independently verified.
+
+Actual public GPT-5 verification passed:
+
+- Forty-seven authentication/routing checks, including exact-session admission,
+  replay/origin protections, expiry and logout.
+- A real native write created and published a forty-one-byte document. The durable
+  send ACK took 78 ms and its canonical reply completed in 34,464 ms after a live
+  model listing had already started the engine.
+- Automatic preservation produced a private R2 archive/manifest. External
+  Cloudflare instance reads confirmed zero active engine instances. The original
+  file downloaded with its exact SHA-256 without waking the engine; single use,
+  exact-session binding and expiry after sixty-two seconds were verified.
+- A later send in the same conversation ACKed in 97 ms and completed in 188,019 ms,
+  including cold restoration and provider execution. Original memory, effective
+  settings and file bytes survived. A private audit of only this owned agent's
+  saved native transcript correlates the actual post-acceptance read call and
+  successful output, with zero subsequent write/edit calls.
+- The engine automatically preserved and stopped again after that continuation;
+  independent Cloudflare reads again confirmed zero active instances.
+
+These are observations, not a startup SLA. Public phase timings include network,
+restoration, native authentication and provider execution. A separate local
+provider-free lifecycle fixture measured helper startup 1,042 ms, restore 35,042
+ms, Gateway process startup 66 ms, SDK authentication 34,766 ms and dispatch 1,169
+ms; these values do not substitute for public production timing.
+
+The a65 revision passed types, lint, formatting, build and 1,081 local core tests
+with six existing platform skips. Exact-head Linux CI passed the complete fresh
+native image suite: files, directories, handoff, PDF, readback, preservation,
+native SDK, owner patch, followup and tool-policy recovery. The original local
+aggregate and both a65 CI aggregates passed all application stages: thirty
+Chromium desktop/mobile cases, two existing duplicate mobile skips, genuine
+private generated-owner coverage in both layouts, recovery and ten-agent capacity
+with four concurrent excess-create rejections. **Their aggregate exits remain
+failed at test-container teardown.** Local final inspection nevertheless proved
+owned absence, both closed ports and all four unrelated containers preserved.
+
+The test-only cleanup repair retains exact-name inspection before every removal,
+allows only classified Docker removal-in-progress/not-found responses to settle
+within a finite deadline, and requires final absence, closed ports and preserved
+baselines. Unknown failures and timeouts remain failures. Seventy-three focused
+acceptance-unit tests passed, including six new settling/classifier cases. CI now
+retains finite cleanup diagnostics; the discarded original Docker error text
+cannot establish the exact historical cause. Final branch-head CI is tracked on
+[PR 1](https://github.com/cikpak/openclaw-task/pull/1). Later cleanup-script and
+documentation commits do not alter the deployed application or helper bytes.
+
+## Historical phase and deployment evidence
+
+Earlier failed attempts and phase results below remain historical; their pending
+statements describe those checkpoints rather than the repaired public cycle.
 
 Implementation phases 1–4 are committed and independently reviewed. At the Phase 4
 handoff, local typecheck, lint, formatting, build, whitespace and LOC audits passed.
@@ -29,7 +85,7 @@ The cached-access proof is not an execution test. Isolated native `chat.inject`
 verification is not model-provider execution and is never an application/helper
 seed endpoint. Earlier experiments establish feasibility, not deployed startup SLA.
 
-## Provider-dependent gate remains open
+## Earlier provider gate — superseded by the repaired deployment
 
 The original supplied OpenAI key returned HTTP 401 `invalid_api_key` and remains
 excluded. On 2026-10-22, a replacement supplied privately authenticated the model
@@ -120,7 +176,7 @@ The existing `ChatSettingsPanel.tsx` is outside the named service/store/adapter
 extraction targets: 493→491 lines, solely removing the condition that hid its
 existing Refresh button. No unrelated component decomposition was added.
 
-## Issue-repair verification in progress
+## Focused repair evidence before deployment
 
 The verification client now rejects closed or failed socket writes immediately
 without mutation replay (five focused cases). The supported Codex direct tool

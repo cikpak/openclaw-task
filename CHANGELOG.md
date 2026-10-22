@@ -13,6 +13,9 @@
   mutations or waiting for an unrelated command timeout.
 - Make the isolated restart fault control validate the exact Gateway process and
   await native child cleanup within its existing deadline before ordinary restart.
+- Let exact test-container cleanup settle classified concurrent Docker removals
+  within a bounded interval, retaining final absence, closed-port and unrelated
+  container checks and publishing safe failure evidence in CI.
 
 ### Cloudflare migration
 
@@ -28,9 +31,10 @@
 - Replace active Compose/Caddy/DigitalOcean deployment with an isolated Cloudflare
   workflow and manual local deployment; CI checks only. Preserve old evidence as
   historical and update the separate OpenClaw documentation project.
-- Record provider-independent verification separately from the pending real
-  provider release cycle; replacement OpenAI credentials passed private model-list
-  validation, and the original invalid key is not shipped.
+- Verify the real GPT-5 production cycle: file creation, automatic save/stop,
+  exact-session download without waking, fresh restore, original conversation
+  memory and native file reading. Keep these results separate from provider-free
+  tests; the original invalid key is not shipped.
 
 ### Latest settings and interaction updates
 
