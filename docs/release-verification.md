@@ -2,6 +2,11 @@
 
 ## Current evidence boundary — 2026-10-22
 
+The manual production deployment is live at
+<https://openclaw-messenger.pages.dev>. See the current production results below;
+the earlier phase counts are historical. This is a testable deployment, not a
+complete release acceptance pass.
+
 Implementation phases 1–4 are committed and independently reviewed. At the Phase 4
 handoff, local typecheck, lint, formatting, build, whitespace and LOC audits passed.
 The recorded suite total is **722 passed, six existing skips**: backend 253,
@@ -58,19 +63,48 @@ Twenty-one pinned-source/installer cases are separate simulated-storage tests;
 they do not substitute for the physical image checks. See
 [native compatibility](native-compatibility.md) for the exact patch boundary.
 
-These results do not claim final global tests, the fresh local full aggregate,
-GitHub CI, immutable deployment artifacts or public paid-provider execution.
-Those outcomes remain below and must be recorded when observed.
+These native-image results are distinct from the application and production
+outcomes below.
 
 ## Phase 5 / production results
 
-Pending final integration and release verification. The release operator must
-record the commit/artifact identity, local harness result, GitHub PR/CI outcome,
-public Pages origin, fresh/repeat deployment outcome, active-engine manager restart,
-private binding/URL settings, cookie/admission/replay/logout checks, SPA/API routing,
-frontend secret scan and sanitized sentinel logging audit. Report any blocked or
-failed check explicitly. Infrastructure availability and provider execution are
-separate outcomes.
+- Implementation commit `5448c77b71131d19f58bb6956843ef28d77ea68c` passed
+  943 core tests with six existing skips, type checking, lint, formatting and the
+  scoped LOC audit. The complete local acceptance failed at desktop Stop after
+  Gateway, media, recovery and twelve desktop cases passed; one input remained
+  Unknown. Later mobile/capacity cases were not reached. Remote acceptance also
+  failed at the restart control. The draft PR is
+  <https://github.com/cikpak/openclaw-task/pull/1>; CI is not green.
+- At the user's request, manual deployment proceeded before complete acceptance.
+  `568dc77db3394dd4e91aae69a8bd9a6c280c4b48` corrected first image provisioning
+  and the same-Worker namespace binding. Backend and Pages deployed successfully;
+  D1 migration applied. The production bucket is private, Worker alternate public
+  URLs are disabled, and deployed observability disables invocation logs/traces
+  and redacts queries. Forty-seven public authentication/routing checks passed,
+  including secure cookies, expiry/replay/origin/session checks and logout.
+- Manager-only diagnostic commit
+  `b37e384236a854e294fb4606f0c76a1d18fd836a` deployed with container rollout
+  `none`, version `9cd32993-df8e-4654-bbb9-f3a01b69aeb6`. It logs finite fixed
+  startup stages/categories without raw errors, environment or payloads. Its
+  scoped types/lint/format and actual build passed; immutable artifacts and
+  source were scanned for known private values without findings. The production
+  image `84c683c3bcd0ab960f5e81b35af4ab76572ef9df982be9c18cb705cbfce7ddef`
+  has the same RootFS and configuration as the tested `ed53` image above.
+- An actual standard-2 VM started. Public live model listing returned 31 available
+  models including `openai/gpt-5`; cached bootstrap responded in 176 ms. The real
+  provider completed a canonical reply with no pending input in about 40.6 seconds.
+  The helper uploaded a recovery archive/manifest and the platform subsequently
+  reported zero active instances. A later explicit request on that original chat
+  also completed after waking again.
+- File verification has **not passed**. The first real-provider reply claimed the
+  requested marker without a canonical file-writing tool call or a published
+  file; an explicit retry also claimed completion without a visible file. Do not
+  count text claims as tool execution or a successful download/restore-file read.
+  One long-lived verification socket timed out on `files.list`, while a fresh
+  socket returned an empty catalogue. The cause remains unproved. The complete
+  public send/preserve/stop/download/restore/continue scenario, production restart
+  proof and complete browser/capacity acceptance remain open. No lifecycle state
+  was cleared and no fallback empty engine was initialized to force readiness.
 
 ## Existing broad-test budget exceptions
 

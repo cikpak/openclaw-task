@@ -2,8 +2,10 @@
 
 ## Cloudflare implementation — 2026-10-22
 
-The current architecture is being delivered in five phases. Phases1–4 have
-recorded checks; Phase 5 integration and publication are being finalized. The
+All five implementation phases are committed, and the manual Cloudflare deployment
+is available at <https://openclaw-messenger.pages.dev>. Release acceptance remains
+incomplete: real chat replies work, but file verification and Stop/restart checks
+have unresolved failures. The
 [current release record](release-verification.md) owns present pass/fail/deployment
 status. Replacement OpenAI credentials passed private model-list validation;
 bounded direct paid inference also passed. The public real-provider application
